@@ -159,7 +159,7 @@ class GamepadDescriptor {
   // HID Report Descriptor
   static const List<int> reportDescriptor = [
     0x05, 0x01,       // Usage Page (Generic Desktop Ctrls)
-    0x09, 0x05,       // Usage (Game Pad)
+    0x09, 0x05,       // Usage (Gamepad)
     0xA1, 0x01,       // Collection (Application)
     0x85, 0x01,       //   Report ID (1)
     
@@ -179,12 +179,6 @@ class GamepadDescriptor {
     0xC0,             //   End Collection
     
     // Buttons (16 buttons)
-    // 1-4: A, B, X, Y
-    // 5-6: L1, R1
-    // 7-8: L2, R2
-    // 9-10: Select, Start
-    // 11-12: L3, R3
-    // 13-16: Extra (Home, etc)
     0x05, 0x09,       //   Usage Page (Button)
     0x19, 0x01,       //   Usage Minimum (0x01)
     0x29, 0x10,       //   Usage Maximum (0x10)
@@ -199,17 +193,9 @@ class GamepadDescriptor {
     0x09, 0x39,       //   Usage (Hat switch)
     0x15, 0x00,       //   Logical Minimum (0)
     0x25, 0x07,       //   Logical Maximum (7)
-    0x35, 0x00,       //   Physical Minimum (0)
-    0x46, 0x3B, 0x01, //   Physical Maximum (315)
-    0x65, 0x14,       //   Unit (System: English Rotation, Length: Centimeter)
-    0x75, 0x04,       //   Report Size (4)
+    0x75, 0x08,       //   Report Size (8)
     0x95, 0x01,       //   Report Count (1)
     0x81, 0x42,       //   Input (Data,Var,Abs,No Wrap,Linear,Preferred State,Null State)
-    
-    // Padding
-    0x75, 0x04,       //   Report Size (4)
-    0x95, 0x01,       //   Report Count (1)
-    0x81, 0x03,       //   Input (Const,Var,Abs)
     
     0xC0              // End Collection
   ];

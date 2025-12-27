@@ -63,11 +63,12 @@ class _VirtualJoystickState extends State<VirtualJoystick> {
               color: Colors.white.withValues(alpha: 0.1),
               border: Border.all(color: Colors.white30),
             ),
-            child: GestureDetector(
+            child: Listener(
               behavior: HitTestBehavior.opaque,
-              onPanStart: (details) => _updatePosition(details.localPosition, actualSize),
-              onPanUpdate: (details) => _updatePosition(details.localPosition, actualSize),
-              onPanEnd: (_) => _reset(),
+              onPointerDown: (event) => _updatePosition(event.localPosition, actualSize),
+              onPointerMove: (event) => _updatePosition(event.localPosition, actualSize),
+              onPointerUp: (_) => _reset(),
+              onPointerCancel: (_) => _reset(),
               child: Align(
                 alignment: _alignment,
                 child: Container(

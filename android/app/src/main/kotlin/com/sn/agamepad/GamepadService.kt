@@ -12,6 +12,9 @@ import android.content.Context
 import android.util.Log
 import java.util.ArrayList
 import java.util.concurrent.Executor
+import kotlin.collections.List
+import kotlin.collections.Map
+import kotlin.collections.mapOf
 
 class GamepadService(private val context: Context) {
     private val TAG = "GamepadService"
@@ -38,6 +41,11 @@ class GamepadService(private val context: Context) {
                             TAG,
                             "onAppStatusChanged: registered=$registered, device=${pluggedDevice?.address}"
                     )
+                    // Only update wasRegistered if we actually got a 'true' or if we were
+                    // explicitly stopping.
+                    // This avoids overwriting true with false during transient screen off states if
+                    // we don't want to.
+                    // However, for consistency with Flutter side:
                     wasRegistered = registered
                     listener?.onAppStatusChanged(registered)
                 }
@@ -176,22 +184,24 @@ class GamepadService(private val context: Context) {
             return
         }
 
+        // Subclass 0x08 is Gamepad (0x04 is Joystick)
+        // Reference: Bluetooth HID Spec subclass byte
         val sdpSettings =
                 BluetoothHidDeviceAppSdpSettings(
                         "AGamepad",
                         "Android Gamepad",
                         "Android",
-                        0x01,
+                        0x08, // Subclass: Gamepad (0x08).
                         reportDescriptor!!
                 )
 
         val qosSettings =
                 BluetoothHidDeviceAppQosSettings(
-                        BluetoothHidDeviceAppQosSettings.SERVICE_BEST_EFFORT,
-                        800,
-                        9,
-                        0,
-                        11250,
+                        BluetoothHidDeviceAppQosSettings.SERVICE_GUARANTEED,
+                        4000, // tokenRate: increased for higher throughput
+                        9, // tokenBucketSize
+                        0, // peakBandwidth: 0 = no limit
+                        1250, // latency: 1.25ms (was 11.25ms)
                         BluetoothHidDeviceAppQosSettings.MAX
                 )
 
@@ -208,18 +218,119 @@ class GamepadService(private val context: Context) {
     }
 
     @SuppressLint("MissingPermission")
-    fun sendReport(buttons: Int, leftX: Int, leftY: Int, rightX: Int, rightY: Int, dpad: Int) {
-        val report = ByteArray(8)
-        report[0] = leftX.toByte()
-        report[1] = leftY.toByte()
-        report[2] = rightX.toByte()
-        report[3] = rightY.toByte()
-        report[4] = (buttons and 0xFF).toByte()
-        report[5] = ((buttons shr 8) and 0xFF).toByte()
-        report[6] = (dpad and 0x0F).toByte()
+    fun requestDiscoverable(duration: Int): Boolean {
+        Log.d(TAG, "requestDiscoverable() called with duration: $duration")
+        if (bluetoothAdapter == null) return false
 
-        bluetoothHidDevice?.connectedDevices?.forEach { device ->
-            bluetoothHidDevice?.sendReport(device, 1, report.copyOfRange(0, 7))
+        // Attempt to set CoD to Gamepad before making discoverable
+        setGamepadClassOfDevice()
+
+        // We can't directly trigger the intent here as we need Activity context,
+        // but we can return true to signal MainActivity to do it.
+        return true
+    }
+
+    /**
+     * Attempts to set the Bluetooth Class of Device (CoD) to Gamepad (0x002508). This uses
+     * reflection to call hidden Android APIs.
+     *
+     * CoD breakdown for 0x002508:
+     * - Major Service Class: 0x00 (None)
+     * - Major Device Class: 0x05 (Peripheral)
+     * - Minor Device Class: 0x08 (Gamepad)
+     *
+     * Note: This may not work on all devices due to:
+     * - Hidden API restrictions (Android 9+)
+     * - Manufacturer-specific Bluetooth stack implementations
+     * - Missing system permissions
+     */
+    @SuppressLint("MissingPermission", "DiscouragedPrivateApi")
+    private fun setGamepadClassOfDevice() {
+        try {
+            // CoD for Gamepad: 0x002508
+            // Format: Major Service Class (bits 13-23) | Major Device Class (bits 8-12) | Minor
+            // Device Class (bits 2-7)
+            // Peripheral (0x05) = Major, Gamepad (0x02) = Minor within Peripheral
+            // Full CoD value: 0x002508 = 0b0000000000100101_00001000
+            val gamepadCoD = 0x002508
+
+            Log.d(
+                    TAG,
+                    "Attempting to set Class of Device to Gamepad (0x${Integer.toHexString(gamepadCoD)})"
+            )
+
+            // Method 1: Try using setClass method via reflection
+            try {
+                val setClassMethod =
+                        bluetoothAdapter?.javaClass?.getDeclaredMethod(
+                                "setClass",
+                                Int::class.java,
+                                Int::class.java
+                        )
+                setClassMethod?.isAccessible = true
+                // Major class 0x05 (Peripheral), Minor class 0x08 (Gamepad within Peripheral)
+                val result = setClassMethod?.invoke(bluetoothAdapter, 0x05, 0x02)
+                Log.d(TAG, "setClass method result: $result")
+            } catch (e: NoSuchMethodException) {
+                Log.d(TAG, "setClass method not found, trying alternative...")
+            } catch (e: Exception) {
+                Log.w(TAG, "setClass method failed: ${e.message}")
+            }
+
+            // Method 2: Try writing to Bluetooth config (if accessible)
+            try {
+                val method =
+                        bluetoothAdapter?.javaClass?.getDeclaredMethod(
+                                "setScanMode",
+                                Int::class.java,
+                                Int::class.java
+                        )
+                // Just log that we tried - this doesn't actually set CoD but doesn't hurt
+                Log.d(TAG, "Scan mode method available for potential CoD setting")
+            } catch (e: Exception) {
+                // Expected to fail, just logging
+            }
+
+            // Method 3: On some Samsung/Qualcomm devices, the CoD is set when HID is registered
+            // The SDP settings subclass 0x08 should influence this
+            Log.d(
+                    TAG,
+                    "Note: HID device registration with subclass 0x08 should influence discovery appearance"
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to set Class of Device: ${e.message}")
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    fun setBluetoothName(name: String): Boolean {
+        Log.d(TAG, "setBluetoothName() called with: $name")
+        if (bluetoothAdapter == null) return false
+        return try {
+            val success = bluetoothAdapter?.setName(name) ?: false
+            Log.d(TAG, "setName result: $success")
+            success
+        } catch (e: Exception) {
+            Log.e(TAG, "Error setting Bluetooth name", e)
+            false
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    fun getBluetoothName(): String {
+        return bluetoothAdapter?.name ?: "Unknown"
+    }
+
+    @SuppressLint("MissingPermission")
+    fun sendRawReport(report: ByteArray) {
+        val hid = bluetoothHidDevice ?: return
+        val devices = hid.connectedDevices
+        if (devices.isEmpty()) return
+
+        // Send report to all connected devices - simple and fast
+        // Packet bursting was causing queue congestion and adding latency
+        for (device in devices) {
+            hid.sendReport(device, 1, report)
         }
     }
 
@@ -233,21 +344,20 @@ class GamepadService(private val context: Context) {
                 "checkAndRestoreState() called - wasRegistered=$wasRegistered, bluetoothHidDevice=${bluetoothHidDevice != null}"
         )
 
-        // If we were supposed to be registered but the proxy is gone, re-initialize
-        if (wasRegistered && bluetoothHidDevice == null) {
-            Log.w(TAG, "HID device proxy was lost! Re-initializing...")
-            initialize(reportDescriptor)
-        } else if (wasRegistered && bluetoothHidDevice != null) {
-            // We have the proxy and were registered, try to re-register
-            Log.w(
-                    TAG,
-                    "Was registered but may have lost registration. Attempting to re-register..."
-            )
-            registerApp()
-        } else if (bluetoothHidDevice == null && bluetoothAdapter != null) {
-            // Even if not registered, ensure we have the proxy
-            Log.d(TAG, "No HID device proxy, ensuring it's set up...")
+        if (bluetoothHidDevice == null && bluetoothAdapter != null) {
+            // Priority 1: Ensure we have the proxy
+            Log.d(TAG, "No HID device proxy, requesting it...")
             bluetoothAdapter?.getProfileProxy(context, serviceListener, BluetoothProfile.HID_DEVICE)
+        } else if (wasRegistered && bluetoothHidDevice != null) {
+            // Priority 2: If we were registered but suspect we might need a refresh.
+            // Note: Calling registerApp() if already registered will often return false.
+            // Ideally we only call this if we know for sure we aren't registered.
+            // But Android doesn't give us a direct way to check.
+            // For now, let's only re-register if we don't have connected devices or some other
+            // hint?
+            // Actually, let's just log and trust the current proxy state for now unless it
+            // explicitly disconnected.
+            Log.d(TAG, "State looks consistent (wasRegistered and have proxy)")
         } else {
             Log.d(TAG, "State looks good, no action needed")
         }

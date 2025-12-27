@@ -112,9 +112,152 @@ class ConnectionPage extends StatelessWidget {
         children: [
           _buildStatusSection(context, connectionProvider),
           const Divider(),
+          _buildBluetoothModeSection(context, connectionProvider),
+          const Divider(),
+          _buildDeviceInfoSection(context, connectionProvider),
+          const Divider(),
           _buildAdvertisingSection(context, connectionProvider),
           const Divider(),
           _buildPairedDevicesSection(context, connectionProvider),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBluetoothModeSection(BuildContext context, ConnectionProvider provider) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Padding(
+          padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+          child: Text("Bluetooth Mode", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          child: SegmentedButton<BluetoothMode>(
+            segments: const [
+              ButtonSegment(
+                value: BluetoothMode.classic,
+                label: Text('Classic'),
+                icon: Icon(Icons.bluetooth),
+              ),
+              ButtonSegment(
+                value: BluetoothMode.ble,
+                label: Text('BLE'),
+                icon: Icon(Icons.bluetooth_searching),
+              ),
+            ],
+            selected: {provider.bluetoothMode},
+            onSelectionChanged: (Set<BluetoothMode> selected) {
+              provider.setBluetoothMode(selected.first);
+            },
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: provider.bluetoothMode == BluetoothMode.ble 
+                  ? Colors.blue.withValues(alpha: 0.1) 
+                  : Colors.grey.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: provider.bluetoothMode == BluetoothMode.ble 
+                    ? Colors.blue.withValues(alpha: 0.3) 
+                    : Colors.grey.withValues(alpha: 0.3),
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  provider.bluetoothMode == BluetoothMode.ble 
+                      ? Icons.info_outline 
+                      : Icons.speed,
+                  color: provider.bluetoothMode == BluetoothMode.ble 
+                      ? Colors.blue 
+                      : Colors.grey[600],
+                  size: 20,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    provider.bluetoothMode == BluetoothMode.ble
+                        ? 'BLE Mode: Shows as Gamepad during discovery.\nHigher latency (~15-30ms more). Best for Fire TV pairing.'
+                        : 'Classic Mode: Lowest latency for gaming.\nMay show as Phone during discovery.',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: provider.bluetoothMode == BluetoothMode.ble 
+                          ? Colors.blue[700] 
+                          : Colors.grey[600],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDeviceInfoSection(BuildContext context, ConnectionProvider provider) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Padding(
+          padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+          child: Text("Device Identity", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
+        ),
+        ListTile(
+          title: const Text("Bluetooth Name"),
+          subtitle: Text(provider.deviceName),
+          trailing: IconButton(
+            icon: const Icon(Icons.edit),
+            onPressed: () => _showNameEditDialog(context, provider),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          child: ElevatedButton.icon(
+            onPressed: () => provider.requestDiscoverable(),
+            icon: const Icon(Icons.visibility),
+            label: const Text("Make Discoverable (for pairing)"),
+            style: ElevatedButton.styleFrom(
+              minimumSize: const Size(double.infinity, 45),
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+      ],
+    );
+  }
+
+  Future<void> _showNameEditDialog(BuildContext context, ConnectionProvider provider) async {
+    final controller = TextEditingController(text: provider.deviceName);
+    return showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text("Set Device Name"),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(
+            labelText: "New Bluetooth Name",
+            hintText: "e.g. Xbox Wireless Controller",
+          ),
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Cancel")),
+          TextButton(
+            onPressed: () {
+              if (controller.text.isNotEmpty) {
+                provider.setBluetoothName(controller.text);
+              }
+              Navigator.pop(ctx);
+            },
+            child: const Text("Save"),
+          ),
         ],
       ),
     );
@@ -189,53 +332,95 @@ class ConnectionPage extends StatelessWidget {
   }
 
   Widget _buildPairedDevicesSection(BuildContext context, ConnectionProvider provider) {
+    final isBleMode = provider.bluetoothMode == BluetoothMode.ble;
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Padding(
-          padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
-          child: Text("Emulate Client (Connect to Host)", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+          child: Text(
+            isBleMode ? "Connection Info (BLE Mode)" : "Emulate Client (Connect to Host)", 
+            style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.grey),
+          ),
         ),
-        if (provider.pairedDevices.isEmpty)
-          const Padding(
-            padding: EdgeInsets.all(16.0),
-            child: Text("No paired devices found. Pair a device in Android Bluetooth Settings first.", style: TextStyle(fontStyle: FontStyle.italic)),
-          )
-        else
-          ...provider.pairedDevices.map((device) {
-            final address = device['address'] ?? "";
-            final name = device['name'] ?? "Unknown";
-            final isConnectedToThis = provider.isConnected && provider.connectedDeviceAddress == address;
-
-            return ListTile(
-              leading: Icon(Icons.devices, color: isConnectedToThis ? Colors.green : null),
-              title: Text(name),
-              subtitle: Text(address),
-              trailing: isConnectedToThis
-                  ? TextButton(
-                      onPressed: () {
-                        debugPrint('[ConnectionPage] Disconnect button pressed for device: $name ($address)');
-                        provider.disconnect(address);
-                      },
-                      child: const Text("Disconnect", style: TextStyle(color: Colors.red)),
-                    )
-                  : TextButton(
-                      onPressed: () {
-                        debugPrint('[ConnectionPage] Connect button pressed for device: $name ($address)');
-                        provider.connect(address);
-                      },
-                      child: const Text("Connect"),
-                    ),
-            );
-          }),
+        
+        // Show BLE mode explanation
+        if (isBleMode)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: TextButton.icon(
-              icon: const Icon(Icons.settings_bluetooth),
-              label: const Text("Open Android Bluetooth Settings"),
-              onPressed: () => openAppSettings(), // Best we can do usually, or specific intent if possible
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.orange.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.info_outline, color: Colors.orange, size: 20),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'In BLE mode, you are a peripheral.\n'
+                      'The HOST device (Fire TV, PC, etc.) must connect TO you.\n\n'
+                      '1. Enable Gamepad above\n'
+                      '2. On the host, scan for Bluetooth devices\n'
+                      '3. Select your phone and confirm pairing',
+                      style: TextStyle(fontSize: 12, color: Colors.orange),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          )
+          ),
+        
+        // Show paired devices only in Classic mode
+        if (!isBleMode) ...[
+          if (provider.pairedDevices.isEmpty)
+            const Padding(
+              padding: EdgeInsets.all(16.0),
+              child: Text("No paired devices found. Pair a device in Android Bluetooth Settings first.", style: TextStyle(fontStyle: FontStyle.italic)),
+            )
+          else
+            ...provider.pairedDevices.map((device) {
+              final address = device['address'] ?? "";
+              final name = device['name'] ?? "Unknown";
+              final isConnectedToThis = provider.isConnected && provider.connectedDeviceAddress == address;
+
+              return ListTile(
+                leading: Icon(Icons.devices, color: isConnectedToThis ? Colors.green : null),
+                title: Text(name),
+                subtitle: Text(address),
+                trailing: isConnectedToThis
+                    ? TextButton(
+                        onPressed: () {
+                          debugPrint('[ConnectionPage] Disconnect button pressed for device: $name ($address)');
+                          provider.disconnect(address);
+                        },
+                        child: const Text("Disconnect", style: TextStyle(color: Colors.red)),
+                      )
+                    : TextButton(
+                        onPressed: () {
+                          debugPrint('[ConnectionPage] Connect button pressed for device: $name ($address)');
+                          provider.connect(address);
+                        },
+                        child: const Text("Connect"),
+                      ),
+              );
+            }),
+        ],
+        
+        const SizedBox(height: 8),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          child: TextButton.icon(
+            icon: const Icon(Icons.settings_bluetooth),
+            label: const Text("Open Android Bluetooth Settings"),
+            onPressed: () => openAppSettings(),
+          ),
+        ),
+        const SizedBox(height: 16),
       ],
     );
   }

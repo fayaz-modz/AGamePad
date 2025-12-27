@@ -77,25 +77,45 @@ class _CircularDPadState extends State<CircularDPad> {
       return;
     }
 
-    // Simple threshold-based direction detection (15% threshold)
-    const threshold = 0.15;
-    final isUp = y < -threshold;
-    final isDown = y > threshold;
-    final isLeft = x < -threshold;
-    final isRight = x > threshold;
+    // Simple threshold-based direction detection
+    // Higher thresholds prevent accidental diagonal activation
+    // Cardinal directions (up/down/left/right) are strongly preferred
+    const cardinalThreshold = 0.25;  // Threshold for single-axis activation
+    const diagonalThreshold = 0.55;  // Both axes must exceed this for diagonal
+    
+    // For diagonals, require both x and y to be strongly in that direction
+    final absX = x.abs();
+    final absY = y.abs();
+    
+    // Only trigger diagonal if BOTH axes are strongly activated
+    final allowDiagonal = absX > diagonalThreshold && absY > diagonalThreshold;
+    
+    final isUp = y < -cardinalThreshold;
+    final isDown = y > cardinalThreshold;
+    final isLeft = x < -cardinalThreshold;
+    final isRight = x > cardinalThreshold;
 
     // Map to D-pad value (0-8 hat switch standard)
     // 0=Up, 1=UpRight, 2=Right, 3=DownRight, 4=Down, 5=DownLeft, 6=Left, 7=UpLeft, 8=Center
     int dpadValue = 8;
     
-    if (isUp && isRight) {
+    if (allowDiagonal && isUp && isRight) {
       dpadValue = 1;
-    } else if (isDown && isRight) {
+    } else if (allowDiagonal && isDown && isRight) {
       dpadValue = 3;
-    } else if (isDown && isLeft) {
+    } else if (allowDiagonal && isDown && isLeft) {
       dpadValue = 5;
-    } else if (isUp && isLeft) {
+    } else if (allowDiagonal && isUp && isLeft) {
       dpadValue = 7;
+    } else if (isUp && absY > absX) {
+      // Prefer the dominant axis for cardinal directions
+      dpadValue = 0;
+    } else if (isDown && absY > absX) {
+      dpadValue = 4;
+    } else if (isRight && absX > absY) {
+      dpadValue = 2;
+    } else if (isLeft && absX > absY) {
+      dpadValue = 6;
     } else if (isUp) {
       dpadValue = 0;
     } else if (isRight) {

@@ -145,16 +145,16 @@ class _RoundButtonState extends State<_RoundButton> {
   Widget build(BuildContext context) {
     return Listener(
       onPointerDown: (_) {
+        widget.onDown(widget.button);  // Send input first for lowest latency
         setState(() => _isPressed = true);
-        widget.onDown(widget.button);
       },
       onPointerUp: (_) {
+        widget.onUp(widget.button);  // Send input first for lowest latency
         setState(() => _isPressed = false);
-        widget.onUp(widget.button);
       },
       onPointerCancel: (_) {
+        widget.onUp(widget.button);  // Send input first for lowest latency
         setState(() => _isPressed = false);
-        widget.onUp(widget.button);
       },
 
       child: AnimatedContainer(
