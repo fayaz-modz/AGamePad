@@ -37,11 +37,6 @@ class BluetoothGamepadService {
   Stream<bool> get appStatusStream => _appStatusController.stream;
 
   Future<void> _handleMethodCall(MethodCall call) async {
-    if (kDebugMode) {
-      debugPrint(
-        '[BluetoothGamepadService] Method call from native: ${call.method}',
-      );
-    }
     switch (call.method) {
       case 'onConnectionStateChanged':
         if (call.arguments is Map) {

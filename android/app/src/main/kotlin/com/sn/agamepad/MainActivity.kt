@@ -239,7 +239,15 @@ class MainActivity :
         }
         when (currentMode) {
             "ble" -> bleGamepadService.sendRawReport(report)
-            else -> classicGamepadService.sendRawReport(report)
+            else -> {
+                // Classic BluetoothHidDevice.sendReport takes ID as a separate arg.
+                // The raw report from Flutter includes the ID (0x01) as the first byte.
+                // We need to strip it, otherwise the data is shifted/corrupted.
+                if (report.isNotEmpty()) {
+                    val payload = report.copyOfRange(1, report.size)
+                    classicGamepadService.sendRawReport(payload)
+                }
+            }
         }
     }
 

@@ -2,10 +2,12 @@ import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 import '../../services/bluetooth_gamepad_service.dart';
 import '../../models/gamepad_layout.dart';
 import '../../models/gamepad_descriptor.dart';
 import '../../services/layout_storage_service.dart';
+import '../../providers/connection_provider.dart';
 import '../widgets/virtual_joystick.dart';
 import '../widgets/circular_dpad.dart';
 import '../widgets/button_cluster.dart';
@@ -18,8 +20,8 @@ class GamepadPage extends StatefulWidget {
 }
 
 class _GamepadPageState extends State<GamepadPage> {
-  final BluetoothGamepadService _service = BluetoothGamepadService();
   final LayoutStorageService _storage = LayoutStorageService();
+  ConnectionProvider? _connectionProvider;
 
   late GamepadLayout _layout;
   late GamepadDescriptor _descriptor;
@@ -52,11 +54,34 @@ class _GamepadPageState extends State<GamepadPage> {
       DeviceOrientation.landscapeRight,
     ]);
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+    
+    // Initialize connection provider after first frame
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _connectionProvider = Provider.of<ConnectionProvider>(
+        context,
+        listen: false,
+      );
+      _loadLayout();
+    });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_connectionProvider == null) {
+      _connectionProvider = Provider.of<ConnectionProvider>(
+        context,
+        listen: false,
+      );
+      if (_isInit == false) {
+        _loadLayout();
+      }
+    }
   }
 
   @override
   void dispose() {
-    _service.stopKeepalive(); // Stop keepalive when leaving gamepad screen
+    _connectionProvider?.stopKeepalive();
     SystemChrome.setPreferredOrientations([
       DeviceOrientation.portraitUp,
       DeviceOrientation.portraitDown,
@@ -65,31 +90,36 @@ class _GamepadPageState extends State<GamepadPage> {
     super.dispose();
   }
 
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (!_isInit) {
-      final args = ModalRoute.of(context)!.settings.arguments;
+  void _loadLayout() async {
+    final args = ModalRoute.of(context)!.settings.arguments;
 
-      // Handle both old format (just layout) and new format (map with layout and editMode)
-      if (args is GamepadLayout) {
-        _layout = args;
-        _isEditing = false;
-      } else if (args is Map) {
-        _layout = args['layout'] as GamepadLayout;
-        _isEditing = args['editMode'] as bool? ?? false;
-      }
-
-      // Initialize descriptor
-      _descriptor = GamepadDescriptor();
-      _buttonMask = ButtonMaskBuilder(_descriptor);
-
-      // Start keepalive to prevent Bluetooth sniff mode latency
-      _service.startKeepalive();
-
-      _isInit = true;
+    // Handle both old format (just layout) and new format (map with layout and editMode)
+    if (args is GamepadLayout) {
+      _layout = args;
+      _isEditing = false;
+    } else if (args is Map) {
+      _layout = args['layout'] as GamepadLayout;
+      _isEditing = args['editMode'] as bool? ?? false;
+    } else {
+      // Default layout
+      final layouts = await _storage.loadLayouts();
+      _layout = layouts.isNotEmpty ? layouts.first : GamepadLayout.xbox();
+      _isEditing = false;
     }
+
+    // Initialize descriptor and button mask
+    _descriptor = GamepadDescriptor();
+    _buttonMask = ButtonMaskBuilder(_descriptor);
+
+    // Start keepalive for connections
+    _connectionProvider?.startKeepalive();
+
+    setState(() {
+      _isInit = true;
+    });
   }
+
+
 
   void _sendUpdate() {
     if (_isEditing) return;
@@ -113,7 +143,7 @@ class _GamepadPageState extends State<GamepadPage> {
     _lastRy = _ry;
     _lastDpad = _dpad;
 
-    _service.sendInput(
+    _connectionProvider?.sendGamepadInput(
       buttons: currentButtons,
       lx: _lx,
       ly: _ly,
@@ -842,17 +872,27 @@ class _OptionButtonState extends State<_OptionButton> {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 50),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
-          color: _isPressed ? Colors.white24 : Colors.grey[900],
-          border: _isPressed ? Border.all(color: Colors.white54) : null,
+          borderRadius: BorderRadius.circular(8),
+          color: _isPressed ? Colors.cyanAccent : Colors.blue[700],
+          border: Border.all(
+            color: _isPressed ? Colors.white : Colors.cyan,
+            width: 2,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.cyan.withValues(alpha: 0.4),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
         child: Center(
           child: Text(
             widget.label,
             style: TextStyle(
-              color: _isPressed ? Colors.white : Colors.grey,
-              fontSize: 12,
-              fontWeight: _isPressed ? FontWeight.bold : FontWeight.normal,
+              color: Colors.white,
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
             ),
           ),
         ),

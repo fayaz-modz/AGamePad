@@ -33,6 +33,10 @@ migrate_working_dir/
 /build/
 /coverage/
 
+# go server related
+server/build/
+server/uhid_server
+
 # Symbolication related
 app.*.symbols
 
