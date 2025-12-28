@@ -46,6 +46,9 @@ class _GamepadPageState extends State<GamepadPage> {
   int _lastRy = 127;
   int _lastDpad = 8;
 
+  // Batching flag to prevent multiple sends in same frame
+  bool _sendScheduled = false;
+
   @override
   void initState() {
     super.initState();
@@ -124,33 +127,43 @@ class _GamepadPageState extends State<GamepadPage> {
   void _sendUpdate() {
     if (_isEditing) return;
 
-    final currentButtons = _buttonMask.mask;
+    // If a send is already scheduled, skip (batching)
+    if (_sendScheduled) return;
+    
+    _sendScheduled = true;
+    
+    // Use scheduleMicrotask to batch multiple rapid calls into one send
+    scheduleMicrotask(() {
+      _sendScheduled = false;
+      
+      final currentButtons = _buttonMask.mask;
 
-    // Only send if state has actually changed to minimize latency and overhead
-    if (currentButtons == _lastButtons &&
-        _lx == _lastLx &&
-        _ly == _lastLy &&
-        _rx == _lastRx &&
-        _ry == _lastRy &&
-        _dpad == _lastDpad) {
-      return;
-    }
+      // Only send if state has actually changed to minimize latency and overhead
+      if (currentButtons == _lastButtons &&
+          _lx == _lastLx &&
+          _ly == _lastLy &&
+          _rx == _lastRx &&
+          _ry == _lastRy &&
+          _dpad == _lastDpad) {
+        return;
+      }
 
-    _lastButtons = currentButtons;
-    _lastLx = _lx;
-    _lastLy = _ly;
-    _lastRx = _rx;
-    _lastRy = _ry;
-    _lastDpad = _dpad;
+      _lastButtons = currentButtons;
+      _lastLx = _lx;
+      _lastLy = _ly;
+      _lastRx = _rx;
+      _lastRy = _ry;
+      _lastDpad = _dpad;
 
-    _connectionProvider?.sendGamepadInput(
-      buttons: currentButtons,
-      lx: _lx,
-      ly: _ly,
-      rx: _rx,
-      ry: _ry,
-      dpad: _dpad,
-    );
+      _connectionProvider?.sendGamepadInput(
+        buttons: currentButtons,
+        lx: _lx,
+        ly: _ly,
+        rx: _rx,
+        ry: _ry,
+        dpad: _dpad,
+      );
+    });
   }
 
   void _onButtonDown(GamepadButton button) {

@@ -15,6 +15,7 @@ class VirtualJoystick extends StatefulWidget {
 
 class _VirtualJoystickState extends State<VirtualJoystick> {
   Alignment _alignment = Alignment.center;
+  int? _activePointerId; // Track which pointer is controlling this joystick
 
   void _updatePosition(Offset localPosition, double size) {
     final center = size / 2;
@@ -65,10 +66,33 @@ class _VirtualJoystickState extends State<VirtualJoystick> {
             ),
             child: Listener(
               behavior: HitTestBehavior.opaque,
-              onPointerDown: (event) => _updatePosition(event.localPosition, actualSize),
-              onPointerMove: (event) => _updatePosition(event.localPosition, actualSize),
-              onPointerUp: (_) => _reset(),
-              onPointerCancel: (_) => _reset(),
+              onPointerDown: (event) {
+                // Only accept if we don't have an active pointer
+                if (_activePointerId == null) {
+                  _activePointerId = event.pointer;
+                  _updatePosition(event.localPosition, actualSize);
+                }
+              },
+              onPointerMove: (event) {
+                // Only respond to our tracked pointer
+                if (_activePointerId == event.pointer) {
+                  _updatePosition(event.localPosition, actualSize);
+                }
+              },
+              onPointerUp: (event) {
+                // Only reset if it's our tracked pointer
+                if (_activePointerId == event.pointer) {
+                  _activePointerId = null;
+                  _reset();
+                }
+              },
+              onPointerCancel: (event) {
+                // Only reset if it's our tracked pointer
+                if (_activePointerId == event.pointer) {
+                  _activePointerId = null;
+                  _reset();
+                }
+              },
               child: Align(
                 alignment: _alignment,
                 child: Container(
