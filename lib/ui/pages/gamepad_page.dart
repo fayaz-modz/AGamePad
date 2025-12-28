@@ -3,7 +3,6 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import '../../services/bluetooth_gamepad_service.dart';
 import '../../models/gamepad_layout.dart';
 import '../../models/gamepad_descriptor.dart';
 import '../../services/layout_storage_service.dart';
@@ -11,6 +10,7 @@ import '../../providers/connection_provider.dart';
 import '../widgets/virtual_joystick.dart';
 import '../widgets/circular_dpad.dart';
 import '../widgets/button_cluster.dart';
+import '../widgets/trackpad_widget.dart';
 
 class GamepadPage extends StatefulWidget {
   const GamepadPage({super.key});
@@ -236,6 +236,26 @@ class _GamepadPageState extends State<GamepadPage> {
       // Re-clamp position to ensure it stays on screen after resize
       control.x = control.x.clamp(0.0, 1.0 - control.width);
       control.y = control.y.clamp(0.0, 1.0 - control.height);
+    });
+  }
+
+  void _updateControlWidth(double newWidth) {
+    if (_selectedControl == null) return;
+    setState(() {
+      final control = _selectedControl!;
+      final cx = control.x + control.width / 2;
+      control.width = newWidth;
+      control.x = (cx - newWidth / 2).clamp(0.0, 1.0 - newWidth);
+    });
+  }
+
+  void _updateControlHeight(double newHeight) {
+    if (_selectedControl == null) return;
+    setState(() {
+      final control = _selectedControl!;
+      final cy = control.y + control.height / 2;
+      control.height = newHeight;
+      control.y = (cy - newHeight / 2).clamp(0.0, 1.0 - newHeight);
     });
   }
 
@@ -543,41 +563,100 @@ class _GamepadPageState extends State<GamepadPage> {
                               ),
                             ),
                             const SizedBox(height: 4),
-                            Row(
-                              children: [
-                                const Text(
-                                  "Size",
-                                  style: TextStyle(
-                                    color: Colors.white70,
-                                    fontSize: 10,
-                                  ),
-                                ),
-                                Expanded(
-                                  child: SliderTheme(
-                                    data: SliderTheme.of(context).copyWith(
-                                      thumbShape: const RoundSliderThumbShape(
-                                        enabledThumbRadius: 6,
-                                      ),
-                                      overlayShape:
-                                          const RoundSliderOverlayShape(
-                                            overlayRadius: 12,
-                                          ),
-                                      trackHeight: 2,
-                                    ),
-                                    child: Slider(
-                                      value: max(
-                                        _selectedControl!.width,
-                                        _selectedControl!.height,
-                                      ),
-                                      min: 0.05,
-                                      max: 0.5,
-                                      activeColor: Colors.blueAccent,
-                                      onChanged: _updateControlSize,
+                            if (_selectedControl!.type == ControlType.dpad ||
+                                _selectedControl!.type == ControlType.buttonCluster ||
+                                _selectedControl!.type == ControlType.joystick)
+                              Row(
+                                children: [
+                                  const Text(
+                                    "Size",
+                                    style: TextStyle(
+                                      color: Colors.white70,
+                                      fontSize: 10,
                                     ),
                                   ),
-                                ),
-                              ],
-                            ),
+                                  Expanded(
+                                    child: SliderTheme(
+                                      data: SliderTheme.of(context).copyWith(
+                                        thumbShape: const RoundSliderThumbShape(
+                                          enabledThumbRadius: 6,
+                                        ),
+                                        overlayShape:
+                                            const RoundSliderOverlayShape(
+                                              overlayRadius: 12,
+                                            ),
+                                        trackHeight: 2,
+                                      ),
+                                      child: Slider(
+                                        value: max(
+                                          _selectedControl!.width,
+                                          _selectedControl!.height,
+                                        ),
+                                        min: 0.05,
+                                        max: 0.5,
+                                        activeColor: Colors.blueAccent,
+                                        onChanged: _updateControlSize,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              )
+                            else ...[
+                              Row(
+                                children: [
+                                  const SizedBox(
+                                    width: 40,
+                                    child: Text(
+                                      "Width",
+                                      style: TextStyle(color: Colors.white70, fontSize: 10),
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: SliderTheme(
+                                      data: SliderTheme.of(context).copyWith(
+                                        thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
+                                        overlayShape: const RoundSliderOverlayShape(overlayRadius: 12),
+                                        trackHeight: 2,
+                                      ),
+                                      child: Slider(
+                                        value: _selectedControl!.width.clamp(0.05, 0.8),
+                                        min: 0.05,
+                                        max: 0.8,
+                                        activeColor: Colors.blueAccent,
+                                        onChanged: _updateControlWidth,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              Row(
+                                children: [
+                                  const SizedBox(
+                                    width: 40,
+                                    child: Text(
+                                      "Height",
+                                      style: TextStyle(color: Colors.white70, fontSize: 10),
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: SliderTheme(
+                                      data: SliderTheme.of(context).copyWith(
+                                        thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
+                                        overlayShape: const RoundSliderOverlayShape(overlayRadius: 12),
+                                        trackHeight: 2,
+                                      ),
+                                      child: Slider(
+                                        value: _selectedControl!.height.clamp(0.05, 0.8),
+                                        min: 0.05,
+                                        max: 0.8,
+                                        activeColor: Colors.blueAccent,
+                                        onChanged: _updateControlHeight,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                               children: [
@@ -766,6 +845,15 @@ class _GamepadPageState extends State<GamepadPage> {
               _onButtonDown(control.buttonMapping ?? GamepadButton.select),
           onUp: () =>
               _onButtonUp(control.buttonMapping ?? GamepadButton.select),
+        );
+      case ControlType.trackpad:
+        return TrackpadWidget(
+          label: control.getLabel(_descriptor),
+          onPointerReport: (dx, dy, buttons) {
+            // Mouse input not implemented in this branch - UI only
+            if (_isEditing) return;
+            // TODO: Implement mouse input when ready
+          },
         );
     }
   }
