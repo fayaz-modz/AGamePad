@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/gamepad_descriptor.dart';
@@ -104,22 +103,34 @@ class UDPGamepadService {
     try {
       // Create RECEIVER socket for listening to broadcasts (on port 2242)
       try {
-        _receiver = await RawDatagramSocket.bind(InternetAddress.anyIPv4, _broadcastPort);
+        _receiver = await RawDatagramSocket.bind(
+          InternetAddress.anyIPv4,
+          _broadcastPort,
+        );
         if (kDebugMode) {
-          debugPrint('[UDPGamepadService] Receiver bound to ${_receiver?.address.address}:${_receiver?.port}');
+          debugPrint(
+            '[UDPGamepadService] Receiver bound to ${_receiver?.address.address}:${_receiver?.port}',
+          );
         }
       } catch (e) {
         if (kDebugMode) {
-          debugPrint('[UDPGamepadService] Failed to bind receiver to port $_broadcastPort: $e');
+          debugPrint(
+            '[UDPGamepadService] Failed to bind receiver to port $_broadcastPort: $e',
+          );
         }
         throw e;
       }
 
       // Create SENDER socket for sending data (on ephemeral port)
       try {
-        _sender = await RawDatagramSocket.bind(InternetAddress.anyIPv4, 0);  // Port 0 = ephemeral
+        _sender = await RawDatagramSocket.bind(
+          InternetAddress.anyIPv4,
+          0,
+        ); // Port 0 = ephemeral
         if (kDebugMode) {
-          debugPrint('[UDPGamepadService] Sender bound to ${_sender?.address.address}:${_sender?.port}');
+          debugPrint(
+            '[UDPGamepadService] Sender bound to ${_sender?.address.address}:${_sender?.port}',
+          );
         }
       } catch (e) {
         if (kDebugMode) {
@@ -132,7 +143,10 @@ class UDPGamepadService {
       try {
         _sender!.broadcastEnabled = true;
       } catch (e) {
-         if (kDebugMode) debugPrint('[UDPGamepadService] Warning: Broadcast enable failed: $e');
+        if (kDebugMode)
+          debugPrint(
+            '[UDPGamepadService] Warning: Broadcast enable failed: $e',
+          );
       }
 
       // Setup single persistent listener for broadcasts on receiver socket
@@ -141,15 +155,19 @@ class UDPGamepadService {
       _isInitialized = true;
       if (kDebugMode) {
         debugPrint('[UDPGamepadService] ✅ Initialized successfully');
-        debugPrint('[UDPGamepadService]    Receiver: ${_receiver?.address.address}:${_receiver?.port}');
-        debugPrint('[UDPGamepadService]    Sender: ${_sender?.address.address}:${_sender?.port}');
+        debugPrint(
+          '[UDPGamepadService]    Receiver: ${_receiver?.address.address}:${_receiver?.port}',
+        );
+        debugPrint(
+          '[UDPGamepadService]    Sender: ${_sender?.address.address}:${_sender?.port}',
+        );
       }
     } catch (e) {
       if (kDebugMode) {
         debugPrint('[UDPGamepadService] Initialization failed: $e');
       }
       _updateConnectionState(UDPConnectionState.error);
-      // We do not rethrow, to avoid crashing the whole app. 
+      // We do not rethrow, to avoid crashing the whole app.
       // The service will just be non-functional but safe.
     }
   }
@@ -190,9 +208,7 @@ class UDPGamepadService {
               _discoveredDevicesController.add(_discoveredDevices.toList());
             } catch (e) {
               if (kDebugMode) {
-                debugPrint(
-                  '[UDPGamepadService] Error parsing broadcast: $e',
-                );
+                debugPrint('[UDPGamepadService] Error parsing broadcast: $e');
               }
             }
           }
@@ -216,7 +232,9 @@ class UDPGamepadService {
     // If initialization failed, return empty list immediately
     if (_sender == null || _receiver == null) {
       if (kDebugMode) {
-        debugPrint('[UDPGamepadService] Cannot discover: service not initialized');
+        debugPrint(
+          '[UDPGamepadService] Cannot discover: service not initialized',
+        );
       }
       _updateConnectionState(UDPConnectionState.error);
       return [];
@@ -225,12 +243,14 @@ class UDPGamepadService {
     try {
       if (kDebugMode) {
         debugPrint(
-            '[UDPGamepadService] Listening for server broadcasts on port ${_sender?.port}...');
+          '[UDPGamepadService] Listening for server broadcasts on port ${_sender?.port}...',
+        );
       }
     } catch (e) {
       if (kDebugMode) {
         debugPrint(
-            '[UDPGamepadService] Warning: Sender socket error reading port: $e');
+          '[UDPGamepadService] Warning: Sender socket error reading port: $e',
+        );
       }
     }
 
@@ -273,8 +293,8 @@ class UDPGamepadService {
 
       // Setup persistent listener for both ACK and data drain immediately
       final ackCompleter = Completer<bool>();
-      
-      // We do not cancel this subscription explicitly unless we fail. 
+
+      // We do not cancel this subscription explicitly unless we fail.
       // If we succeed, it stays alive to keep the socket active in the event loop.
       StreamSubscription? subscription;
       subscription = dataSocket.listen(
@@ -287,11 +307,13 @@ class UDPGamepadService {
                 try {
                   final response = utf8.decode(datagram.data);
                   if (response == _descriptorAck) {
-                     if (kDebugMode) {
-                       debugPrint('[UDPGamepadService] Descriptor acknowledgment received');
-                     }
-                     ackCompleter.complete(true);
-                     return; 
+                    if (kDebugMode) {
+                      debugPrint(
+                        '[UDPGamepadService] Descriptor acknowledgment received',
+                      );
+                    }
+                    ackCompleter.complete(true);
+                    return;
                   }
                 } catch (e) {
                   // ignore
@@ -303,7 +325,9 @@ class UDPGamepadService {
         },
         onError: (error) {
           if (kDebugMode) {
-            debugPrint('[UDPGamepadService] Acknowledgment/Socket error: $error');
+            debugPrint(
+              '[UDPGamepadService] Acknowledgment/Socket error: $error',
+            );
           }
           if (!ackCompleter.isCompleted) ackCompleter.complete(false);
         },
@@ -385,9 +409,15 @@ class UDPGamepadService {
     if (!isConnected || _sender == null || _connectedDevice == null) {
       if (kDebugMode) {
         debugPrint('[UDPGamepadService] ❌ Cannot send input: not connected');
-        debugPrint('[UDPGamepadService]    Connection state: $_connectionState');
-        debugPrint('[UDPGamepadService]    Sender: ${_sender != null ? "available" : "null"}');
-        debugPrint('[UDPGamepadService]    Connected device: ${_connectedDevice?.deviceName ?? "null"}');
+        debugPrint(
+          '[UDPGamepadService]    Connection state: $_connectionState',
+        );
+        debugPrint(
+          '[UDPGamepadService]    Sender: ${_sender != null ? "available" : "null"}',
+        );
+        debugPrint(
+          '[UDPGamepadService]    Connected device: ${_connectedDevice?.deviceName ?? "null"}',
+        );
       }
       return;
     }
@@ -403,18 +433,18 @@ class UDPGamepadService {
       // Index 6 (0x35): RY
       final report = Uint8List(10);
       report[0] = 0x01; // Report ID 1
-      report[1] = lx;       // LX (Left X)
-      report[2] = ly;       // LY (Left Y)
-      report[3] = rx;       // RX (Right X) -> Usage 0x32 (Z)
-      
+      report[1] = lx; // LX (Left X)
+      report[2] = ly; // LY (Left Y)
+      report[3] = rx; // RX (Right X) -> Usage 0x32 (Z)
+
       // L2 Trigger - Digital fallback to full axis -> Usage 0x33 (Rx)
       report[4] = (buttons & 0x100) != 0 ? 255 : 0;
-      
+
       // R2 Trigger - Digital fallback to full axis -> Usage 0x34 (Ry)
       report[5] = (buttons & 0x200) != 0 ? 255 : 0;
-      
-      report[6] = ry;       // RY (Right Y) -> Usage 0x35 (Rz)
-      
+
+      report[6] = ry; // RY (Right Y) -> Usage 0x35 (Rz)
+
       report[7] = buttons & 0xFF;
       report[8] = (buttons >> 8) & 0xFF;
       report[9] = dpad;
@@ -451,7 +481,9 @@ class UDPGamepadService {
     try {
       // Use the last input report if available, otherwise send a neutral state
       // [ID, LX, LY, RX, L2, R2, RY, ButtonsL, ButtonsH, Hat]
-      final packetToSend = _lastInputReport ?? Uint8List.fromList([0x01, 127, 127, 127, 0, 0, 127, 0, 0, 8]);
+      final packetToSend =
+          _lastInputReport ??
+          Uint8List.fromList([0x01, 127, 127, 127, 0, 0, 127, 0, 0, 8]);
 
       _sender!.send(
         packetToSend,

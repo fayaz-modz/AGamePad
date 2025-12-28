@@ -416,6 +416,24 @@ class ConnectionProvider with ChangeNotifier {
     }
   }
 
+  // Method for sending mouse input - only supported over Bluetooth for now
+  void sendMouseInput({
+    required int dx,
+    required int dy,
+    required int buttons,
+    int wheel = 0,
+  }) {
+    if (_connectionMode.isBluetooth) {
+      _bluetoothService.sendMouseInput(
+        dx: dx,
+        dy: dy,
+        buttons: buttons,
+        wheel: wheel,
+      );
+    }
+    // UDP doesn't support mouse HID directly yet in the current server spec
+  }
+
   // Keepalive methods for Bluetooth
   void startKeepalive() {
     if (_connectionMode.isBluetooth) {

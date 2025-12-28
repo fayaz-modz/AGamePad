@@ -863,9 +863,12 @@ class _GamepadPageState extends State<GamepadPage> {
         return TrackpadWidget(
           label: control.getLabel(_descriptor),
           onPointerReport: (dx, dy, buttons) {
-            // Mouse input not implemented in this branch - UI only
             if (_isEditing) return;
-            // TODO: Implement mouse input when ready
+            _connectionProvider?.sendMouseInput(
+              dx: dx,
+              dy: dy,
+              buttons: buttons,
+            );
           },
         );
     }

@@ -255,6 +255,25 @@ class BluetoothGamepadService {
     _sendRawReport(report);
   }
 
+  void sendMouseInput({
+    required int buttons,
+    required int dx,
+    required int dy,
+    int wheel = 0,
+  }) {
+    if (!_isInitialized) return;
+
+    // Simple mouse report: [ID, BTNS, X, Y, WHEEL]
+    final report = Uint8List(5);
+    report[0] = 0x02;  // Report ID 2 for mouse
+    report[1] = buttons;
+    report[2] = dx.clamp(-127, 127);
+    report[3] = dy.clamp(-127, 127);
+    report[4] = wheel.clamp(-127, 127);
+
+    _sendRawReport(report);
+  }
+
   void _sendRawReport(Uint8List report) {
     ServicesBinding.instance.defaultBinaryMessenger.send(
       'com.sn.agamepad/gamepad/raw',
