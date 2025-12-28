@@ -70,8 +70,10 @@ class BleGamepadService(private val context: Context) {
   private var gattServer: BluetoothGattServer? = null
 
   private var reportCharacteristic: BluetoothGattCharacteristic? = null
+  private var mouseReportCharacteristic: BluetoothGattCharacteristic? = null
   private var connectedDevice: BluetoothDevice? = null
   private var notificationsEnabled = false
+  private var mouseNotificationsEnabled = false
 
   private var reportDescriptor: ByteArray? = null
   private var isAdvertising = false
@@ -242,8 +244,13 @@ class BleGamepadService(private val context: Context) {
                           byteArrayOf(0x01)
                         }
                         HID_REPORT_UUID -> {
-                          // Return neutral gamepad state with Report ID
-                          byteArrayOf(0x01, 127, 127, 127, 127, 0, 0, 8)
+                          if (characteristic?.instanceId == reportCharacteristic?.instanceId) {
+                            // Return neutral gamepad state (Report ID 1)
+                            byteArrayOf(0x01, 127, 127, 127, 127, 0, 0, 8)
+                          } else {
+                            // Return neutral mouse state (Report ID 2)
+                            byteArrayOf(0x02, 0, 0, 0, 0)
+                          }
                         }
                         // Device Information
                         MANUFACTURER_NAME_UUID -> {
@@ -312,13 +319,19 @@ class BleGamepadService(private val context: Context) {
                   gattServer?.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, 0, value)
                 }
                 REPORT_REFERENCE_UUID -> {
-                  // Report ID (0 for single report) and Report Type (Input = 1)
+                  val reportId =
+                          if (descriptor?.characteristic?.instanceId ==
+                                          reportCharacteristic?.instanceId
+                          )
+                                  0x01
+                          else 0x02
+                  // Report ID and Report Type (Input = 1)
                   gattServer?.sendResponse(
                           device,
                           requestId,
                           BluetoothGatt.GATT_SUCCESS,
                           0,
-                          byteArrayOf(0x00, 0x01)
+                          byteArrayOf(reportId.toByte(), 0x01)
                   )
                 }
                 else -> {
@@ -349,10 +362,17 @@ class BleGamepadService(private val context: Context) {
               )
 
               if (descriptor?.uuid == CCC_DESCRIPTOR_UUID) {
-                notificationsEnabled =
+                val enabled =
                         value?.contentEquals(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE) ==
                                 true
-                Log.d(TAG, "Notifications enabled: $notificationsEnabled")
+
+                if (descriptor?.characteristic?.instanceId == reportCharacteristic?.instanceId) {
+                  notificationsEnabled = enabled
+                  Log.d(TAG, "Gamepad notifications enabled: $notificationsEnabled")
+                } else {
+                  mouseNotificationsEnabled = enabled
+                  Log.d(TAG, "Mouse notifications enabled: $mouseNotificationsEnabled")
+                }
 
                 if (notificationsEnabled && isBonded) {
                   // Now fully connected and ready for input
@@ -559,8 +579,36 @@ class BleGamepadService(private val context: Context) {
 
     hidService.addCharacteristic(reportCharacteristic)
 
+    // HID Report - Mouse (encrypted read/notify)
+    mouseReportCharacteristic =
+            BluetoothGattCharacteristic(
+                    HID_REPORT_UUID,
+                    BluetoothGattCharacteristic.PROPERTY_READ or
+                            BluetoothGattCharacteristic.PROPERTY_NOTIFY,
+                    BluetoothGattCharacteristic.PERMISSION_READ_ENCRYPTED
+            )
+
+    // CCC Descriptor for mouse
+    val mouseCccDescriptor =
+            BluetoothGattDescriptor(
+                    CCC_DESCRIPTOR_UUID,
+                    BluetoothGattDescriptor.PERMISSION_READ or
+                            BluetoothGattDescriptor.PERMISSION_WRITE
+            )
+    mouseReportCharacteristic?.addDescriptor(mouseCccDescriptor)
+
+    // Report Reference Descriptor for mouse
+    val mouseReportRefDescriptor =
+            BluetoothGattDescriptor(
+                    REPORT_REFERENCE_UUID,
+                    BluetoothGattDescriptor.PERMISSION_READ_ENCRYPTED
+            )
+    mouseReportCharacteristic?.addDescriptor(mouseReportRefDescriptor)
+
+    hidService.addCharacteristic(mouseReportCharacteristic)
+
     gattServer?.addService(hidService)
-    Log.d(TAG, "HID Service added with encrypted permissions")
+    Log.d(TAG, "HID Service added with encrypted permissions (gamepad + mouse)")
 
     Thread.sleep(100)
 
@@ -659,9 +707,26 @@ class BleGamepadService(private val context: Context) {
   @SuppressLint("MissingPermission")
   fun sendRawReport(report: ByteArray) {
     val device = connectedDevice ?: return
-    val characteristic = reportCharacteristic ?: return
+    if (report.isEmpty()) return
 
-    if (!notificationsEnabled || !isBonded) return
+    // Route to correct characteristic based on Report ID
+    val characteristic =
+            when (report[0].toInt()) {
+              0x01 -> reportCharacteristic
+              0x02 -> mouseReportCharacteristic
+              else -> null
+            }
+                    ?: return
+
+    // Check if notifications are enabled for this characteristic
+    val notifEnabled =
+            when (report[0].toInt()) {
+              0x01 -> notificationsEnabled
+              0x02 -> mouseNotificationsEnabled
+              else -> false
+            }
+
+    if (!notifEnabled || !isBonded) return
 
     characteristic.value = report
     gattServer?.notifyCharacteristicChanged(device, characteristic, false)
