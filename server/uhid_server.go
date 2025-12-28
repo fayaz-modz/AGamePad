@@ -16,10 +16,10 @@ import (
 )
 
 const (
-	UHIDDevicePath         = "/dev/uhid"
-	UHIDModule             = "uhid"
-	BroadcastInterval      = 2 * time.Second // Broadcast every 2 seconds
-	ConnectionTimeout      = 5 * time.Second // Consider disconnected after 5 seconds of no input
+	UHIDDevicePath    = "/dev/uhid"
+	UHIDModule        = "uhid"
+	BroadcastInterval = 2 * time.Second // Broadcast every 2 seconds
+	ConnectionTimeout = 5 * time.Second // Consider disconnected after 5 seconds of no input
 )
 
 type Config struct {
@@ -36,17 +36,17 @@ type DeviceInfo struct {
 }
 
 type UHIDServer struct {
-	config           Config
-	broadcastConn    *net.UDPConn
-	udpConn          *net.UDPConn
-	uhidFile         *os.File
-	deviceInfo       DeviceInfo
-	running          bool
-	descriptor       []byte
-	descriptorSet    bool
-	deviceCreated    bool
-	lastInputTime    time.Time
-	connected        bool
+	config        Config
+	broadcastConn *net.UDPConn
+	udpConn       *net.UDPConn
+	uhidFile      *os.File
+	deviceInfo    DeviceInfo
+	running       bool
+	descriptor    []byte
+	descriptorSet bool
+	deviceCreated bool
+	lastInputTime time.Time
+	connected     bool
 }
 
 func main() {
@@ -118,7 +118,7 @@ func (s *UHIDServer) Start() error {
 
 	// Start active broadcasting
 	go s.activeBroadcast()
-	
+
 	// Start reading UHID events from kernel
 	if s.uhidFile != nil {
 		go s.readUHIDEvents()
@@ -230,30 +230,34 @@ func (s *UHIDServer) activeBroadcast() {
 	}
 
 	for s.running {
-		select {
-		case <-ticker.C:
-			// Check if we should broadcast (not connected or timed out)
-			now := time.Now()
-			if !s.connected || now.Sub(s.lastInputTime) > ConnectionTimeout {
-				if s.connected {
-					color.Yellow("⚠️  Connection timeout, resuming broadcast...")
-					s.connected = false
-				}
+		<-ticker.C
 
-				// Update timestamp and broadcast
-				s.deviceInfo.Timestamp = now.Unix()
-				response, err := json.Marshal(s.deviceInfo)
-				if err != nil {
-					color.Red("❌ Failed to marshal device info: %v", err)
-					continue
-				}
+		addr, err := getLocalIP()
+		if err == nil {
+			s.deviceInfo.IP = addr
+		}
 
-				_, err = s.broadcastConn.WriteToUDP(response, broadcastAddr)
-				if err != nil {
-					color.Red("❌ Failed to broadcast device info: %v", err)
-				} else if s.config.Verbose {
-					color.Cyan("📡 Broadcasting: %s", string(response))
-				}
+		// Check if we should broadcast (not connected or timed out)
+		now := time.Now()
+		if !s.connected || now.Sub(s.lastInputTime) > ConnectionTimeout {
+			if s.connected {
+				color.Yellow("⚠️  Connection timeout, resuming broadcast...")
+				s.connected = false
+			}
+
+			// Update timestamp and broadcast
+			s.deviceInfo.Timestamp = now.Unix()
+			response, err := json.Marshal(s.deviceInfo)
+			if err != nil {
+				color.Red("❌ Failed to marshal device info: %v", err)
+				continue
+			}
+
+			_, err = s.broadcastConn.WriteToUDP(response, broadcastAddr)
+			if err != nil {
+				color.Red("❌ Failed to broadcast device info: %v", err)
+			} else if s.config.Verbose {
+				color.Cyan("📡 Broadcasting: %s", string(response))
 			}
 		}
 	}
@@ -431,7 +435,7 @@ func (s *UHIDServer) createUHIDDeviceWithDescriptor(descriptor []byte) error {
 	//     ...
 	//   } u;
 	// };
-	
+
 	const UHID_CREATE2 = 11
 	const maxDescriptorSize = 4096
 	const nameSize = 128
@@ -522,20 +526,20 @@ func (s *UHIDServer) createUHIDDeviceWithDescriptor(descriptor []byte) error {
 
 func (s *UHIDServer) destroyUHIDDevice() error {
 	const UHID_DESTROY = 1
-	
+
 	// Create a simple event with just the type
 	event := make([]byte, 4)
 	event[0] = UHID_DESTROY
 	event[1] = 0
 	event[2] = 0
 	event[3] = 0
-	
+
 	_, err := s.uhidFile.Write(event)
 	if err != nil {
 		color.Red("❌ Failed to send UHID_DESTROY: %v", err)
 		return err
 	}
-	
+
 	color.Green("✅ UHID device destroyed")
 	s.deviceCreated = false
 	return nil
@@ -544,9 +548,9 @@ func (s *UHIDServer) destroyUHIDDevice() error {
 func (s *UHIDServer) readUHIDEvents() {
 	const eventSize = 4380 // sizeof(struct uhid_event)
 	buffer := make([]byte, eventSize)
-	
+
 	color.Cyan("📖 Started reading UHID events from kernel...")
-	
+
 	for s.running {
 		n, err := s.uhidFile.Read(buffer)
 		if err != nil {
@@ -555,14 +559,14 @@ func (s *UHIDServer) readUHIDEvents() {
 			}
 			continue
 		}
-		
+
 		if n < 4 {
 			continue
 		}
-		
+
 		// Extract event type from first 4 bytes (little endian)
 		eventType := uint32(buffer[0]) | uint32(buffer[1])<<8 | uint32(buffer[2])<<16 | uint32(buffer[3])<<24
-		
+
 		// Log important events
 		switch eventType {
 		case 0: // UHID_START
@@ -583,7 +587,7 @@ func (s *UHIDServer) readUHIDEvents() {
 			// Don't log unknown events to avoid spam
 		}
 	}
-	
+
 	color.Yellow("📖 Stopped reading UHID events")
 }
 
@@ -600,7 +604,7 @@ func (s *UHIDServer) processGamepadInput(data []byte, addr *net.UDPAddr) {
 		color.Yellow("⚠️  UHID file not available, ignoring input")
 		return
 	}
-	
+
 	if !s.deviceCreated {
 		color.Yellow("⚠️  UHID device not created yet, ignoring input")
 		return
@@ -610,22 +614,22 @@ func (s *UHIDServer) processGamepadInput(data []byte, addr *net.UDPAddr) {
 	{
 		const UHID_INPUT2 = 12
 		const maxDescriptorSize = 4096
-		
+
 		// Validate input data
 		if len(data) < 1 {
 			color.Red("❌ Invalid input data: too short")
 			return
 		}
-		
+
 		color.Cyan("   Packet data (%d bytes): %X", len(data), data)
-		
+
 		// struct uhid_input2_req {
-		//   __u16 size;              // at offset 4-5  
+		//   __u16 size;              // at offset 4-5
 		//   __u8 data[UHID_DATA_MAX]; // at offset 6+
 		// }
 		// The data field includes the report ID as the first byte!
 		// Our packet already has: [ReportID] [axes...] [buttons...] [dpad]
-		
+
 		// Calculate the size of the event structure
 		eventSize := 4 + 128 + 64 + 64 + 2 + 2 + 4 + 4 + 4 + 4 + maxDescriptorSize
 		event := make([]byte, eventSize)
@@ -641,7 +645,7 @@ func (s *UHIDServer) processGamepadInput(data []byte, addr *net.UDPAddr) {
 		dataLen := uint16(len(data))
 		event[4] = byte(dataLen & 0xFF)
 		event[5] = byte((dataLen >> 8) & 0xFF)
-		
+
 		// Data at offset 6 (includes report ID as first byte)
 		copy(event[6:], data)
 
