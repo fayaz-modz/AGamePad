@@ -322,7 +322,7 @@ class GamepadService(private val context: Context) {
     }
 
     @SuppressLint("MissingPermission")
-    fun sendRawReport(report: ByteArray) {
+    fun sendRawReport(id: Int, report: ByteArray) {
         val hid = bluetoothHidDevice ?: return
         val devices = hid.connectedDevices
         if (devices.isEmpty()) return
@@ -330,7 +330,7 @@ class GamepadService(private val context: Context) {
         // Send report to all connected devices - simple and fast
         // Packet bursting was causing queue congestion and adding latency
         for (device in devices) {
-            hid.sendReport(device, 1, report)
+            hid.sendReport(device, id, report)
         }
     }
 
