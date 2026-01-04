@@ -53,12 +53,13 @@ class _VirtualJoystickState extends State<VirtualJoystick> {
       builder: (context, constraints) {
         // Enforce square aspect ratio for the joystick area
         final actualSize = min(constraints.maxWidth, constraints.maxHeight);
-        final knobSize = actualSize / 2.5;
+        final knobSize = actualSize / 2.0; // Increased from 2.5 to 2.0 for bigger knob
 
         return Center(
           child: Container(
             width: actualSize,
             height: actualSize,
+            clipBehavior: Clip.none, // Allow knob to overflow outside the circle
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: Colors.white.withValues(alpha: 0.1),
@@ -93,16 +94,24 @@ class _VirtualJoystickState extends State<VirtualJoystick> {
                   _reset();
                 }
               },
-              child: Align(
-                alignment: _alignment,
-                child: Container(
-                  width: knobSize,
-                  height: knobSize,
-                  decoration: const BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.blueAccent,
+              child: Stack(
+                clipBehavior: Clip.none, // Allow knob to overflow the Stack
+                children: [
+                  // Use a positioned widget to place the knob so its center
+                  // aligns with the parent circumference at max displacement
+                  Positioned(
+                    left: (actualSize / 2) + (_alignment.x * (actualSize / 2)) - (knobSize / 2),
+                    top: (actualSize / 2) + (_alignment.y * (actualSize / 2)) - (knobSize / 2),
+                    child: Container(
+                      width: knobSize,
+                      height: knobSize,
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.blueAccent,
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ),
             ),
           ),

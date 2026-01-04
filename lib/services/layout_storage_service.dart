@@ -15,7 +15,9 @@ class LayoutStorageService {
     ];
 
     if (jsonList != null) {
-      layouts.addAll(jsonList.map((str) => GamepadLayout.fromJson(jsonDecode(str))));
+      layouts.addAll(
+        jsonList.map((str) => GamepadLayout.fromJson(jsonDecode(str))),
+      );
     }
     return layouts;
   }
@@ -23,7 +25,7 @@ class LayoutStorageService {
   Future<void> saveLayout(GamepadLayout layout) async {
     final prefs = await SharedPreferences.getInstance();
     List<GamepadLayout> current = await loadLayouts();
-    
+
     // Remove if exists (update)
     current.removeWhere((l) => l.id == layout.id);
     // Don't duplicate defaults
@@ -36,23 +38,23 @@ class LayoutStorageService {
         .where((l) => l.id != 'xbox_default' && l.id != 'android_default')
         .map((l) => jsonEncode(l.toJson()))
         .toList();
-    
+
     await prefs.setStringList(keyLayouts, jsonList);
   }
 
   Future<void> deleteLayout(String layoutId) async {
     final prefs = await SharedPreferences.getInstance();
     List<GamepadLayout> current = await loadLayouts();
-    
+
     // Remove the layout
     current.removeWhere((l) => l.id == layoutId);
-    
+
     // Filter out defaults from persistence list
     List<String> jsonList = current
         .where((l) => l.id != 'xbox_default' && l.id != 'android_default')
         .map((l) => jsonEncode(l.toJson()))
         .toList();
-    
+
     await prefs.setStringList(keyLayouts, jsonList);
   }
 }

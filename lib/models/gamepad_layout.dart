@@ -12,42 +12,42 @@ class GamepadLayout {
       id: 'xbox_default',
       name: 'Xbox Style',
       controls: [
-        // Left side
+        // Left side - use left edge positioning
         GamepadControl(
           id: 'l_joystick',
           type: ControlType.joystick,
-          x: 0.22,
-          y: 0.65,
-          width: 0.28,
-          height: 0.28,
+          left: 260, // Pixels from left
+          bottom: 100, // Pixels from bottom
+          width: 140,
+          height: 140,
           joystickMapping: Joystick.left,
         ),
         GamepadControl(
           id: 'dpad',
           type: ControlType.dpad,
-          x: 0.06,
-          y: 0.30,
-          width: 0.45,
-          height: 0.45,
+          left: 130, // Pixels from left
+          bottom: 200, // Pixels from top
+          width: 150,
+          height: 150,
         ),
 
-        // Right side
+        // Right side - use right edge positioning
         GamepadControl(
           id: 'r_joystick',
           type: ControlType.joystick,
-          x: 0.65,
-          y: 0.65,
-          width: 0.28,
-          height: 0.28,
+          right: 260, // Pixels from left
+          bottom: 100, // Pixels from bottom
+          width: 140,
+          height: 140,
           joystickMapping: Joystick.right,
         ),
         GamepadControl(
           id: 'abxy',
           type: ControlType.buttonCluster,
-          x: 0.75,
-          y: 0.30,
-          width: 0.45,
-          height: 0.45,
+          right: 130, // Pixels from left
+          bottom: 200, // Pixels from top
+          width: 160,
+          height: 160,
           // Xbox Standard: A-Bottom, B-Right, X-Left, Y-Top
           clusterBottom: GamepadButton.button1,
           clusterRight: GamepadButton.button2,
@@ -59,96 +59,70 @@ class GamepadLayout {
         GamepadControl(
           id: 'l1',
           type: ControlType.shoulderButton,
-          x: 0.05,
-          y: 0.05,
-          width: 0.20,
-          height: 0.08,
+          left: 210, // Pixels from left
+          bottom: 330, // Pixels from top
+          width: 70,
+          height: 70,
           buttonMapping: GamepadButton.l1,
         ),
         GamepadControl(
           id: 'l2',
           type: ControlType.shoulderButton,
-          x: 0.05,
-          y: 0.15,
-          width: 0.20,
-          height: 0.08,
+          left: 270, // Pixels from left
+          bottom: 270, // Pixels from top
+          width: 70,
+          height: 70,
           buttonMapping: GamepadButton.l2,
         ),
 
         GamepadControl(
           id: 'r1',
           type: ControlType.shoulderButton,
-          x: 0.73,
-          y: 0.05,
-          width: 0.20,
-          height: 0.08,
+          right: 210, // Pixels from left
+          bottom: 330, // Pixels from top
+          width: 70,
+          height: 70,
           buttonMapping: GamepadButton.r1,
         ),
         GamepadControl(
           id: 'r2',
           type: ControlType.shoulderButton,
-          x: 0.73,
-          y: 0.15,
-          width: 0.20,
-          height: 0.08,
+          right: 270, // Pixels from left
+          bottom: 270, // Pixels from top
+          width: 70,
+          height: 70,
           buttonMapping: GamepadButton.r2,
         ),
 
-        // Center - Stuck to bottom edge
+        // Center buttons - can use left or calculate from center
         GamepadControl(
           id: 'select',
           type: ControlType.button,
-          x: 0.35,
-          y: 0.50,
-          width: 0.08,
-          height: 0.08,
+          centerHorizontal: true,
+          offsetX: -60,
+          bottom: 180, // Pixels from top
+          width: 64,
+          height: 40,
           buttonMapping: GamepadButton.select,
         ),
         GamepadControl(
           id: 'start',
           type: ControlType.button,
-          x: 0.55,
-          y: 0.50,
-          width: 0.08,
-          height: 0.08,
+          centerHorizontal: true,
+          offsetX: 60,
+          bottom: 180, // Pixels from top
+          width: 64,
+          height: 40,
           buttonMapping: GamepadButton.start,
         ),
         GamepadControl(
           id: 'mode',
           type: ControlType.button,
-          x: 0.45,
-          y: 0.42,
-          width: 0.08,
-          height: 0.08,
-          buttonMapping: GamepadButton.home, // Mode/Home
-        ),
-
-        // Stick Buttons (L3/R3)
-        GamepadControl(
-          id: 'l3',
-          type: ControlType.button,
-          x: 0.38,
-          y: 0.65,
-          width: 0.08,
-          height: 0.08,
-          buttonMapping: GamepadButton.l3,
-        ),
-        GamepadControl(
-          id: 'r3',
-          type: ControlType.button,
-          x: 0.52,
-          y: 0.65,
-          width: 0.08,
-          height: 0.08,
-          buttonMapping: GamepadButton.r3,
-        ),
-        GamepadControl(
-          id: 'trackpad',
-          type: ControlType.trackpad,
-          x: 0.35,
-          y: 0.10,
-          width: 0.30,
-          height: 0.25,
+          centerHorizontal: true, // Center horizontally
+          bottom: 230, // Pixels from bottom
+          width: 64,
+          height: 40,
+          buttonMapping: GamepadButton.home,
         ),
       ],
     );
@@ -156,148 +130,120 @@ class GamepadLayout {
 
   static GamepadLayout android() {
     return GamepadLayout(
-      id: 'android_default',
-      name: 'Android Layout',
+      id: 'xbox_default',
+      name: 'Xbox Style',
       controls: [
-        // Left side
+        // Left side - use left edge positioning
         GamepadControl(
           id: 'l_joystick',
           type: ControlType.joystick,
-          x: 0.20,
-          y: 0.65,
-          width: 0.28,
-          height: 0.28,
+          left: 260, // Pixels from left
+          bottom: 100, // Pixels from bottom
+          width: 140,
+          height: 140,
           joystickMapping: Joystick.left,
         ),
         GamepadControl(
           id: 'dpad',
           type: ControlType.dpad,
-          x: 0.06,
-          y: 0.25,
-          width: 0.45,
-          height: 0.45,
+          left: 130, // Pixels from left
+          bottom: 200, // Pixels from top
+          width: 150,
+          height: 150,
         ),
 
-        // Right side
+        // Right side - use right edge positioning
         GamepadControl(
           id: 'r_joystick',
           type: ControlType.joystick,
-          x: 0.65,
-          y: 0.65,
-          width: 0.28,
-          height: 0.28,
+          right: 260, // Pixels from left
+          bottom: 100, // Pixels from bottom
+          width: 140,
+          height: 140,
           joystickMapping: Joystick.right,
         ),
         GamepadControl(
-          id: 'abxycz',
+          id: 'abxy',
           type: ControlType.buttonCluster,
-          x: 0.7,
-          y: 0.2,
-          width: 0.55,
-          height: 0.55,
-          // Android Mapping: Standard 6-button cluster
-          clusterBottom: GamepadButton.button1, // A
-          clusterRight: GamepadButton.button2, // B
-          clusterLeft: GamepadButton.button3, // X
-          clusterTop: GamepadButton.button4, // Y
-          clusterC: GamepadButton.c, // C
-          clusterZ: GamepadButton.z, // Z
+          right: 130, // Pixels from left
+          bottom: 200, // Pixels from top
+          width: 160,
+          height: 160,
+          // Xbox Standard: A-Bottom, B-Right, X-Left, Y-Top
+          clusterBottom: GamepadButton.button1,
+          clusterRight: GamepadButton.button2,
+          clusterLeft: GamepadButton.button3,
+          clusterTop: GamepadButton.button4,
         ),
 
         // Shoulders
         GamepadControl(
           id: 'l1',
           type: ControlType.shoulderButton,
-          x: 0.05,
-          y: 0.05,
-          width: 0.20,
-          height: 0.08,
+          left: 210, // Pixels from left
+          bottom: 330, // Pixels from top
+          width: 70,
+          height: 70,
           buttonMapping: GamepadButton.l1,
         ),
         GamepadControl(
           id: 'l2',
           type: ControlType.shoulderButton,
-          x: 0.05,
-          y: 0.15,
-          width: 0.20,
-          height: 0.08,
+          left: 270, // Pixels from left
+          bottom: 270, // Pixels from top
+          width: 70,
+          height: 70,
           buttonMapping: GamepadButton.l2,
         ),
 
         GamepadControl(
           id: 'r1',
           type: ControlType.shoulderButton,
-          x: 0.73,
-          y: 0.05,
-          width: 0.20,
-          height: 0.08,
+          right: 210, // Pixels from left
+          bottom: 330, // Pixels from top
+          width: 70,
+          height: 70,
           buttonMapping: GamepadButton.r1,
         ),
         GamepadControl(
           id: 'r2',
           type: ControlType.shoulderButton,
-          x: 0.73,
-          y: 0.15,
-          width: 0.20,
-          height: 0.08,
+          right: 270, // Pixels from left
+          bottom: 270, // Pixels from top
+          width: 70,
+          height: 70,
           buttonMapping: GamepadButton.r2,
         ),
 
-        // Center - Stuck to bottom edge
+        // Center buttons - can use left or calculate from center
         GamepadControl(
           id: 'select',
           type: ControlType.button,
-          x: 0.35,
-          y: 0.50,
-          width: 0.08,
-          height: 0.08,
+          centerHorizontal: true,
+          offsetX: -60,
+          bottom: 180, // Pixels from top
+          width: 64,
+          height: 40,
           buttonMapping: GamepadButton.select,
         ),
         GamepadControl(
           id: 'start',
           type: ControlType.button,
-          x: 0.55,
-          y: 0.50,
-          width: 0.08,
-          height: 0.08,
+          centerHorizontal: true,
+          offsetX: 60,
+          bottom: 180, // Pixels from top
+          width: 64,
+          height: 40,
           buttonMapping: GamepadButton.start,
         ),
         GamepadControl(
           id: 'mode',
           type: ControlType.button,
-          x: 0.45,
-          y: 0.42,
-          width: 0.08,
-          height: 0.08,
-          buttonMapping: GamepadButton.home, // Mode/Home
-        ),
-
-        // Stick Buttons (L3/R3)
-        GamepadControl(
-          id: 'l3',
-          type: ControlType.button,
-          x: 0.38,
-          y: 0.65,
-          width: 0.08,
-          height: 0.08,
-          buttonMapping: GamepadButton.l3,
-        ),
-        GamepadControl(
-          id: 'r3',
-          type: ControlType.button,
-          x: 0.52,
-          y: 0.65,
-          width: 0.08,
-          height: 0.08,
-          buttonMapping: GamepadButton.r3,
-        ),
-        GamepadControl(
-          id: 'trackpad',
-          type: ControlType.trackpad,
-          x: 0.35,
-          y: 0.10,
-          width: 0.30,
-          height: 0.25,
+          centerHorizontal: true, // Center horizontally
+          bottom: 230, // Pixels from bottom
+          width: 64,
+          height: 40,
+          buttonMapping: GamepadButton.home,
         ),
       ],
     );
@@ -334,8 +280,22 @@ enum ControlType {
 class GamepadControl {
   final String id;
   final ControlType type;
-  double x; // 0.0-1.0
-  double y; // 0.0-1.0
+
+  // Edge-based positioning in pixels (anchored to CENTER of control)
+  double? left; // Distance from left edge to CENTER of control
+  double? right; // Distance from right edge to CENTER of control
+  double? top; // Distance from top edge to CENTER of control
+  double? bottom; // Distance from bottom edge to CENTER of control
+
+  // Centering options
+  final bool
+  centerHorizontal; // If true, center horizontally and ignore left/right
+  final bool centerVertical; // If true, center vertically and ignore top/bottom
+  final double
+  offsetX; // Horizontal offset from center (when centerHorizontal=true)
+  final double
+  offsetY; // Vertical offset from center (when centerVertical=true)
+
   double width;
   double height;
 
@@ -354,8 +314,14 @@ class GamepadControl {
   GamepadControl({
     required this.id,
     required this.type,
-    required this.x,
-    required this.y,
+    this.left,
+    this.right,
+    this.top,
+    this.bottom,
+    this.centerHorizontal = false,
+    this.centerVertical = false,
+    this.offsetX = 0,
+    this.offsetY = 0,
     required this.width,
     required this.height,
     this.buttonMapping,
@@ -366,13 +332,26 @@ class GamepadControl {
     this.clusterC,
     this.clusterZ,
     this.joystickMapping,
-  });
+  }) : assert(
+         centerHorizontal || left != null || right != null,
+         'Must specify centerHorizontal=true OR provide left or right',
+       ),
+       assert(
+         centerVertical || top != null || bottom != null,
+         'Must specify centerVertical=true OR provide top or bottom',
+       );
 
   GamepadControl copyWith({
     String? id,
     ControlType? type,
-    double? x,
-    double? y,
+    double? left,
+    double? right,
+    double? top,
+    double? bottom,
+    bool? centerHorizontal,
+    bool? centerVertical,
+    double? offsetX,
+    double? offsetY,
     double? width,
     double? height,
     GamepadButton? buttonMapping,
@@ -387,8 +366,14 @@ class GamepadControl {
     return GamepadControl(
       id: id ?? this.id,
       type: type ?? this.type,
-      x: x ?? this.x,
-      y: y ?? this.y,
+      left: left ?? this.left,
+      right: right ?? this.right,
+      top: top ?? this.top,
+      bottom: bottom ?? this.bottom,
+      centerHorizontal: centerHorizontal ?? this.centerHorizontal,
+      centerVertical: centerVertical ?? this.centerVertical,
+      offsetX: offsetX ?? this.offsetX,
+      offsetY: offsetY ?? this.offsetY,
       width: width ?? this.width,
       height: height ?? this.height,
       buttonMapping: buttonMapping ?? this.buttonMapping,
@@ -414,8 +399,14 @@ class GamepadControl {
     return {
       'id': id,
       'type': type.index,
-      'x': x,
-      'y': y,
+      'left': left,
+      'right': right,
+      'top': top,
+      'bottom': bottom,
+      'centerHorizontal': centerHorizontal,
+      'centerVertical': centerVertical,
+      'offsetX': offsetX,
+      'offsetY': offsetY,
       'width': width,
       'height': height,
       'buttonMapping': buttonMapping?.index,
@@ -433,8 +424,14 @@ class GamepadControl {
     return GamepadControl(
       id: json['id'],
       type: ControlType.values[json['type']],
-      x: json['x'],
-      y: json['y'],
+      left: json['left'],
+      right: json['right'],
+      top: json['top'],
+      bottom: json['bottom'],
+      centerHorizontal: json['centerHorizontal'] ?? false,
+      centerVertical: json['centerVertical'] ?? false,
+      offsetX: json['offsetX'] ?? 0,
+      offsetY: json['offsetY'] ?? 0,
       width: json['width'],
       height: json['height'],
       buttonMapping: json['buttonMapping'] != null

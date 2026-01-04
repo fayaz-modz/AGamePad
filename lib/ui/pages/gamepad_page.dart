@@ -11,6 +11,7 @@ import '../widgets/virtual_joystick.dart';
 import '../widgets/circular_dpad.dart';
 import '../widgets/button_cluster.dart';
 import '../widgets/trackpad_widget.dart';
+import '../widgets/shoulder_button.dart';
 
 class GamepadPage extends StatefulWidget {
   const GamepadPage({super.key});
@@ -57,7 +58,7 @@ class _GamepadPageState extends State<GamepadPage> {
       DeviceOrientation.landscapeRight,
     ]);
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
-    
+
     // Initialize connection provider after first frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _connectionProvider = Provider.of<ConnectionProvider>(
@@ -93,6 +94,22 @@ class _GamepadPageState extends State<GamepadPage> {
     super.dispose();
   }
 
+  @override
+  void reassemble() {
+    super.reassemble();
+    // Reload layout on hot reload - for default layouts, reload from source
+    if (_isInit) {
+      setState(() {
+        if (_layout.id == 'xbox_default') {
+          _layout = GamepadLayout.xbox();
+        } else if (_layout.id == 'android_default') {
+          _layout = GamepadLayout.android();
+        }
+        // Custom layouts will keep their current state
+      });
+    }
+  }
+
   void _loadLayout() async {
     final args = ModalRoute.of(context)!.settings.arguments;
 
@@ -122,20 +139,18 @@ class _GamepadPageState extends State<GamepadPage> {
     });
   }
 
-
-
   void _sendUpdate() {
     if (_isEditing) return;
 
     // If a send is already scheduled, skip (batching)
     if (_sendScheduled) return;
-    
+
     _sendScheduled = true;
-    
+
     // Use scheduleMicrotask to batch multiple rapid calls into one send
     scheduleMicrotask(() {
       _sendScheduled = false;
-      
+
       final currentButtons = _buttonMask.mask;
 
       // Only send if state has actually changed to minimize latency and overhead
@@ -225,15 +240,9 @@ class _GamepadPageState extends State<GamepadPage> {
     setState(() {
       final control = _selectedControl!;
 
-      // Calculate current center
-      final cx = control.x + control.width / 2;
-      final cy = control.y + control.height / 2;
-
-      // Calculate aspect ratio
+      // TODO: Reimplement with edge-based positioning
+      // For now, just update size
       final ratio = control.width / control.height;
-
-      // Determine new dimensions maintaining aspect ratio
-      // basing "size" on the largest dimension
       if (control.width >= control.height) {
         control.width = newSize;
         control.height = newSize / ratio;
@@ -241,14 +250,6 @@ class _GamepadPageState extends State<GamepadPage> {
         control.height = newSize;
         control.width = newSize * ratio;
       }
-
-      // Restore position based on center
-      control.x = cx - control.width / 2;
-      control.y = cy - control.height / 2;
-
-      // Re-clamp position to ensure it stays on screen after resize
-      control.x = control.x.clamp(0.0, 1.0 - control.width);
-      control.y = control.y.clamp(0.0, 1.0 - control.height);
     });
   }
 
@@ -256,9 +257,8 @@ class _GamepadPageState extends State<GamepadPage> {
     if (_selectedControl == null) return;
     setState(() {
       final control = _selectedControl!;
-      final cx = control.x + control.width / 2;
       control.width = newWidth;
-      control.x = (cx - newWidth / 2).clamp(0.0, 1.0 - newWidth);
+      // TODO: Adjust left/right position if needed
     });
   }
 
@@ -266,9 +266,8 @@ class _GamepadPageState extends State<GamepadPage> {
     if (_selectedControl == null) return;
     setState(() {
       final control = _selectedControl!;
-      final cy = control.y + control.height / 2;
       control.height = newHeight;
-      control.y = (cy - newHeight / 2).clamp(0.0, 1.0 - newHeight);
+      // TODO: Adjust top/bottom position if needed
     });
   }
 
@@ -503,6 +502,7 @@ class _GamepadPageState extends State<GamepadPage> {
     return Scaffold(
       backgroundColor: Colors.black,
       body: Stack(
+        clipBehavior: Clip.none, // Allow controls to overflow without clipping
         children: [
           // Render all controls from layout
           ..._layout.controls.map(
@@ -577,7 +577,8 @@ class _GamepadPageState extends State<GamepadPage> {
                             ),
                             const SizedBox(height: 4),
                             if (_selectedControl!.type == ControlType.dpad ||
-                                _selectedControl!.type == ControlType.buttonCluster ||
+                                _selectedControl!.type ==
+                                    ControlType.buttonCluster ||
                                 _selectedControl!.type == ControlType.joystick)
                               Row(
                                 children: [
@@ -621,18 +622,29 @@ class _GamepadPageState extends State<GamepadPage> {
                                     width: 40,
                                     child: Text(
                                       "Width",
-                                      style: TextStyle(color: Colors.white70, fontSize: 10),
+                                      style: TextStyle(
+                                        color: Colors.white70,
+                                        fontSize: 10,
+                                      ),
                                     ),
                                   ),
                                   Expanded(
                                     child: SliderTheme(
                                       data: SliderTheme.of(context).copyWith(
-                                        thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
-                                        overlayShape: const RoundSliderOverlayShape(overlayRadius: 12),
+                                        thumbShape: const RoundSliderThumbShape(
+                                          enabledThumbRadius: 6,
+                                        ),
+                                        overlayShape:
+                                            const RoundSliderOverlayShape(
+                                              overlayRadius: 12,
+                                            ),
                                         trackHeight: 2,
                                       ),
                                       child: Slider(
-                                        value: _selectedControl!.width.clamp(0.05, 0.8),
+                                        value: _selectedControl!.width.clamp(
+                                          0.05,
+                                          0.8,
+                                        ),
                                         min: 0.05,
                                         max: 0.8,
                                         activeColor: Colors.blueAccent,
@@ -648,18 +660,29 @@ class _GamepadPageState extends State<GamepadPage> {
                                     width: 40,
                                     child: Text(
                                       "Height",
-                                      style: TextStyle(color: Colors.white70, fontSize: 10),
+                                      style: TextStyle(
+                                        color: Colors.white70,
+                                        fontSize: 10,
+                                      ),
                                     ),
                                   ),
                                   Expanded(
                                     child: SliderTheme(
                                       data: SliderTheme.of(context).copyWith(
-                                        thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
-                                        overlayShape: const RoundSliderOverlayShape(overlayRadius: 12),
+                                        thumbShape: const RoundSliderThumbShape(
+                                          enabledThumbRadius: 6,
+                                        ),
+                                        overlayShape:
+                                            const RoundSliderOverlayShape(
+                                              overlayRadius: 12,
+                                            ),
                                         trackHeight: 2,
                                       ),
                                       child: Slider(
-                                        value: _selectedControl!.height.clamp(0.05, 0.8),
+                                        value: _selectedControl!.height.clamp(
+                                          0.05,
+                                          0.8,
+                                        ),
                                         min: 0.05,
                                         max: 0.8,
                                         activeColor: Colors.blueAccent,
@@ -738,16 +761,44 @@ class _GamepadPageState extends State<GamepadPage> {
     GamepadControl control,
     Size screenSize,
   ) {
-    final left = control.x * screenSize.width;
-    final top = control.y * screenSize.height;
-    final width = control.width * screenSize.width;
-    final height = control.height * screenSize.height;
+    // Edge-based positioning in pixels
+    final width = control.width;
+    final height = control.height;
 
-    // For D-pad, button cluster, and joysticks, enforce square dimensions
+    // Calculate left position (where left edge of control should be)
+    final double left;
+    if (control.centerHorizontal) {
+      // Center horizontally with optional offset
+      left = (screenSize.width / 2) - (width / 2) + control.offsetX;
+    } else if (control.left != null) {
+      // left represents distance from left edge to CENTER of control
+      left = control.left! - (width / 2);
+    } else {
+      // right represents distance from right edge to CENTER of control
+      final centerFromLeft = screenSize.width - control.right!;
+      left = centerFromLeft - (width / 2);
+    }
+
+    // Calculate top position (where top edge of control should be)
+    final double top;
+    if (control.centerVertical) {
+      // Center vertically with optional offset
+      top = (screenSize.height / 2) - (height / 2) + control.offsetY;
+    } else if (control.top != null) {
+      // top represents distance from top edge to CENTER of control
+      top = control.top! - (height / 2);
+    } else {
+      // bottom represents distance from bottom edge to CENTER of control
+      final centerFromTop = screenSize.height - control.bottom!;
+      top = centerFromTop - (height / 2);
+    }
+
+    // For D-pad, button cluster, joysticks, and shoulder buttons, enforce square dimensions
     final needsSquare =
         control.type == ControlType.dpad ||
         control.type == ControlType.buttonCluster ||
-        control.type == ControlType.joystick;
+        control.type == ControlType.joystick ||
+        control.type == ControlType.shoulderButton;
     final actualWidth = needsSquare ? min(width, height) : width;
     final actualHeight = needsSquare ? min(width, height) : height;
 
@@ -785,16 +836,40 @@ class _GamepadPageState extends State<GamepadPage> {
         child: GestureDetector(
           onPanUpdate: (details) {
             setState(() {
-              control.x += details.delta.dx / screenSize.width;
-              control.y += details.delta.dy / screenSize.height;
-              // Fix clamping to use effective visual size
-              // We use effectiveRelWidth/Height which represents the actual purely visual footprint
-              control.x = control.x.clamp(0.0, 1.0 - effectiveRelWidth);
-              control.y = control.y.clamp(0.0, 1.0 - effectiveRelHeight);
+              // Update edge positions based on drag delta
+              if (control.left != null) {
+                control.left = control.left! + details.delta.dx;
+                // Clamp to screen
+                control.left = control.left!.clamp(
+                  0.0,
+                  screenSize.width - width,
+                );
+              } else if (control.right != null) {
+                control.right = control.right! - details.delta.dx;
+                control.right = control.right!.clamp(
+                  0.0,
+                  screenSize.width - width,
+                );
+              }
+
+              if (control.top != null) {
+                control.top = control.top! + details.delta.dy;
+                control.top = control.top!.clamp(
+                  0.0,
+                  screenSize.height - height,
+                );
+              } else if (control.bottom != null) {
+                control.bottom = control.bottom! - details.delta.dy;
+                control.bottom = control.bottom!.clamp(
+                  0.0,
+                  screenSize.height - height,
+                );
+              }
             });
           },
           onTap: () => _selectControl(control),
           child: Container(
+            clipBehavior: Clip.none, // Allow overflow during editing too
             decoration: BoxDecoration(
               border: Border.all(color: Colors.red, width: 2),
               color: Colors.black45,
@@ -845,11 +920,29 @@ class _GamepadPageState extends State<GamepadPage> {
           buttonZ: control.clusterZ,
         );
       case ControlType.shoulderButton:
-        return _ShoulderButton(
-          control.getLabel(_descriptor),
-          control.buttonMapping ?? GamepadButton.l1,
-          _onButtonDown,
-          _onButtonUp,
+        // Determine shoulder button type
+        ShoulderButtonType shoulderType;
+        final button = control.buttonMapping ?? GamepadButton.l1;
+
+        if (button == GamepadButton.l1) {
+          shoulderType = ShoulderButtonType.l1;
+        } else if (button == GamepadButton.l2) {
+          shoulderType = ShoulderButtonType.l2;
+        } else if (button == GamepadButton.r1) {
+          shoulderType = ShoulderButtonType.r1;
+        } else if (button == GamepadButton.r2) {
+          shoulderType = ShoulderButtonType.r2;
+        } else {
+          // Default to l1 if unknown
+          shoulderType = ShoulderButtonType.l1;
+        }
+
+        return ShoulderButton(
+          label: control.getLabel(_descriptor),
+          button: button,
+          type: shoulderType,
+          onDown: _onButtonDown,
+          onUp: _onButtonUp,
         );
       case ControlType.button:
         return _OptionButton(
@@ -875,71 +968,6 @@ class _GamepadPageState extends State<GamepadPage> {
   }
 }
 
-class _ShoulderButton extends StatefulWidget {
-  final String label;
-  final GamepadButton button;
-  final void Function(GamepadButton) onDown;
-  final void Function(GamepadButton) onUp;
-
-  const _ShoulderButton(this.label, this.button, this.onDown, this.onUp);
-
-  @override
-  State<_ShoulderButton> createState() => _ShoulderButtonState();
-}
-
-class _ShoulderButtonState extends State<_ShoulderButton> {
-  bool _isPressed = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return Listener(
-      onPointerDown: (_) {
-        widget.onDown(widget.button);  // Send input first for lowest latency
-        setState(() => _isPressed = true);
-      },
-      onPointerUp: (_) {
-        widget.onUp(widget.button);  // Send input first for lowest latency
-        setState(() => _isPressed = false);
-      },
-      onPointerCancel: (_) {
-        widget.onUp(widget.button);  // Send input first for lowest latency
-        setState(() => _isPressed = false);
-      },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 50),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(5),
-          color: _isPressed
-              ? Colors.blueAccent.withValues(alpha: 0.5)
-              : Colors.grey[800],
-          border: Border.all(
-            color: _isPressed ? Colors.blueAccent : Colors.white54,
-            width: _isPressed ? 2 : 1,
-          ),
-          boxShadow: _isPressed
-              ? [
-                  BoxShadow(
-                    color: Colors.blueAccent.withValues(alpha: 0.5),
-                    blurRadius: 10,
-                    spreadRadius: 1,
-                  ),
-                ]
-              : [],
-        ),
-        child: Center(
-          child: Text(
-            widget.label,
-            style: TextStyle(
-              color: _isPressed ? Colors.white : Colors.white,
-              fontWeight: _isPressed ? FontWeight.bold : FontWeight.normal,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _OptionButton extends StatefulWidget {
   final String label;
   final VoidCallback onDown;
@@ -962,15 +990,15 @@ class _OptionButtonState extends State<_OptionButton> {
   Widget build(BuildContext context) {
     return Listener(
       onPointerDown: (_) {
-        widget.onDown();  // Send input first for lowest latency
+        widget.onDown(); // Send input first for lowest latency
         setState(() => _isPressed = true);
       },
       onPointerUp: (_) {
-        widget.onUp();  // Send input first for lowest latency
+        widget.onUp(); // Send input first for lowest latency
         setState(() => _isPressed = false);
       },
       onPointerCancel: (_) {
-        widget.onUp();  // Send input first for lowest latency
+        widget.onUp(); // Send input first for lowest latency
         setState(() => _isPressed = false);
       },
       child: AnimatedContainer(
