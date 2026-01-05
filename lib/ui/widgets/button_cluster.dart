@@ -34,30 +34,33 @@ class ButtonCluster extends StatelessWidget {
     return LayoutBuilder(builder: (ctx, constraints) {
       final width = constraints.maxWidth;
       final height = constraints.maxHeight;
-      final size = min(width, height);
-      
-      // Use fractional positions so everything scales proportionally
+      // For 6-button layout (wider), use height as base size to fill vertical space
+      // For 4-button layout (square), use min dimension
       final has6Buttons = buttonC != null;
+      final size = has6Buttons ? height : min(width, height);
       
-      // Button size as fraction of container - reduced to prevent clipping with increased spacing
-      final btnSizeFraction = has6Buttons ? 0.32 : 0.35;
+      // Button size as fraction of container
+      // 6-buttons: larger fraction of height (since it's wider)
+      final btnSizeFraction = has6Buttons ? 0.38 : 0.35;
       final btnSize = size * btnSizeFraction;
       
-      // Calculate spacing for cluster formation - push out from center
-      final spacing = has6Buttons ? btnSize * 0.75 : btnSize * 0.85;
+      // Calculate spacing for cluster formation
+      final spacing = has6Buttons ? btnSize * 0.8 : btnSize * 0.85;
       
       // Center point of the container
       final centerX = width / 2;
       final centerY = height / 2;
       
-      // Offset for 6-button layout to shift the main 4 buttons left
-      final clusterOffsetX = has6Buttons ? -size * 0.12 : 0.0;
+      // Offset to center the entire group horizontally
+      // For 6-buttons: geometric center of {-spacing, +spacing*2.0} is +0.5*spacing.
+      // So we shift left by 0.5*spacing to center it at 0.
+      final groupOffsetX = has6Buttons ? -spacing * 0.5 : 0.0;
       
       return Stack(
         children: [
           // Button 1 (Bottom) - centered horizontally, below center
           Positioned(
-            left: centerX + clusterOffsetX - btnSize / 2,
+            left: centerX + groupOffsetX - btnSize / 2,
             top: centerY + spacing - btnSize / 2,
             child: _RoundButton(
               descriptor.getButtonLabel(buttonBottom),
@@ -70,7 +73,7 @@ class ButtonCluster extends StatelessWidget {
           ),
           // Button 2 (Right) - right of center
           Positioned(
-            left: centerX + spacing + clusterOffsetX - btnSize / 2,
+            left: centerX + spacing + groupOffsetX - btnSize / 2,
             top: centerY - btnSize / 2,
             child: _RoundButton(
               descriptor.getButtonLabel(buttonRight),
@@ -83,7 +86,7 @@ class ButtonCluster extends StatelessWidget {
           ),
           // Button 3 (Left) - left of center
           Positioned(
-            left: centerX - spacing + clusterOffsetX - btnSize / 2,
+            left: centerX - spacing + groupOffsetX - btnSize / 2,
             top: centerY - btnSize / 2,
             child: _RoundButton(
               descriptor.getButtonLabel(buttonLeft),
@@ -96,7 +99,7 @@ class ButtonCluster extends StatelessWidget {
           ),
           // Button 4 (Top) - centered horizontally, above center
           Positioned(
-            left: centerX + clusterOffsetX - btnSize / 2,
+            left: centerX + groupOffsetX - btnSize / 2,
             top: centerY - spacing - btnSize / 2,
             child: _RoundButton(
               descriptor.getButtonLabel(buttonTop),
@@ -111,8 +114,8 @@ class ButtonCluster extends StatelessWidget {
           // C Button (Bottom Right for 6-button layout)
           if (buttonC != null)
             Positioned(
-              left: centerX + spacing * 1.8 - btnSize / 2,
-              top: centerY + spacing * 0.5 - btnSize / 2,
+              left: centerX + spacing * 2.0 + groupOffsetX - btnSize / 2,
+              top: centerY + spacing * 0.85 - btnSize / 2,
               child: _RoundButton(
                 descriptor.getButtonLabel(buttonC!),
                 Colors.purple,
@@ -125,8 +128,8 @@ class ButtonCluster extends StatelessWidget {
           // Z Button (Top Right for 6-button layout)
           if (buttonZ != null)
             Positioned(
-              left: centerX + spacing * 1.8 - btnSize / 2,
-              top: centerY - spacing * 0.5 - btnSize / 2,
+              left: centerX + spacing * 2.0 + groupOffsetX - btnSize / 2,
+              top: centerY - spacing * 0.85 - btnSize / 2,
               child: _RoundButton(
                 descriptor.getButtonLabel(buttonZ!),
                 Colors.cyan,

@@ -245,11 +245,17 @@ class BleGamepadService(private val context: Context) {
                         }
                         HID_REPORT_UUID -> {
                           if (characteristic?.instanceId == reportCharacteristic?.instanceId) {
-                            // Return neutral gamepad state (Report ID 1)
-                            byteArrayOf(0x01, 127, 127, 127, 127, 0, 0, 8)
+                            // Return neutral gamepad state (Report ID 1) - No ID in value
+                            // 6 axes (0x7F) + 2 buttons bytes (0x00) + 1 hat (0x08) = 9 bytes
+                            // (Extended)
+                            // Or 4 axes + 2 buttons + 1 hat = 7 bytes (Classic)
+                            // We should match what sendInput sends. We are switching to 6-axis.
+                            // X, Y, Z (L2), Rx (RightX), Ry (RightY), Rz (R2), BtnL, BtnH, Hat
+                            byteArrayOf(127, 127, 0, 127, 127, 0, 0, 0, 8)
                           } else {
-                            // Return neutral mouse state (Report ID 2)
-                            byteArrayOf(0x02, 0, 0, 0, 0)
+                            // Return neutral mouse state (Report ID 2) - No ID in value
+                            // Buttons, X, Y, Wheel
+                            byteArrayOf(0, 0, 0, 0)
                           }
                         }
                         // Device Information
@@ -513,21 +519,21 @@ class BleGamepadService(private val context: Context) {
     val hidService =
             BluetoothGattService(HID_SERVICE_UUID, BluetoothGattService.SERVICE_TYPE_PRIMARY)
 
-    // HID Information (encrypted read)
+    // HID Information (open read)
     val hidInfoChar =
             BluetoothGattCharacteristic(
                     HID_INFORMATION_UUID,
                     BluetoothGattCharacteristic.PROPERTY_READ,
-                    BluetoothGattCharacteristic.PERMISSION_READ_ENCRYPTED
+                    BluetoothGattCharacteristic.PERMISSION_READ
             )
     hidService.addCharacteristic(hidInfoChar)
 
-    // Report Map (encrypted read)
+    // Report Map (open read)
     val reportMapChar =
             BluetoothGattCharacteristic(
                     HID_REPORT_MAP_UUID,
                     BluetoothGattCharacteristic.PROPERTY_READ,
-                    BluetoothGattCharacteristic.PERMISSION_READ_ENCRYPTED
+                    BluetoothGattCharacteristic.PERMISSION_READ
             )
     hidService.addCharacteristic(reportMapChar)
 
@@ -569,12 +575,9 @@ class BleGamepadService(private val context: Context) {
             )
     reportCharacteristic?.addDescriptor(cccDescriptor)
 
-    // Report Reference Descriptor
+    // Report Reference Descriptor (open read)
     val reportRefDescriptor =
-            BluetoothGattDescriptor(
-                    REPORT_REFERENCE_UUID,
-                    BluetoothGattDescriptor.PERMISSION_READ_ENCRYPTED
-            )
+            BluetoothGattDescriptor(REPORT_REFERENCE_UUID, BluetoothGattDescriptor.PERMISSION_READ)
     reportCharacteristic?.addDescriptor(reportRefDescriptor)
 
     hidService.addCharacteristic(reportCharacteristic)
@@ -597,12 +600,9 @@ class BleGamepadService(private val context: Context) {
             )
     mouseReportCharacteristic?.addDescriptor(mouseCccDescriptor)
 
-    // Report Reference Descriptor for mouse
+    // Report Reference Descriptor for mouse (open read)
     val mouseReportRefDescriptor =
-            BluetoothGattDescriptor(
-                    REPORT_REFERENCE_UUID,
-                    BluetoothGattDescriptor.PERMISSION_READ_ENCRYPTED
-            )
+            BluetoothGattDescriptor(REPORT_REFERENCE_UUID, BluetoothGattDescriptor.PERMISSION_READ)
     mouseReportCharacteristic?.addDescriptor(mouseReportRefDescriptor)
 
     hidService.addCharacteristic(mouseReportCharacteristic)
@@ -728,7 +728,11 @@ class BleGamepadService(private val context: Context) {
 
     if (!notifEnabled || !isBonded) return
 
-    characteristic.value = report
+    // HOGP Spec: If Report Reference Descriptor is used, Report ID is NOT included in the value
+    // Data comes in as [ID, Payload...]. We need to send [Payload...]
+    val payload = if (report.size > 1) report.copyOfRange(1, report.size) else byteArrayOf()
+
+    characteristic.value = payload
     gattServer?.notifyCharacteristicChanged(device, characteristic, false)
   }
 

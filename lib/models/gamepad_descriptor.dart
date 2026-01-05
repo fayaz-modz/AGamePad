@@ -156,25 +156,29 @@ class GamepadDescriptor {
         return 'EXTRA';
     }
   }
-  // HID Report Descriptor - Combined Gamepad and Mouse
+  // HID Report Descriptor - Combined Gamepad and Mouse (Updated to 6-axis for compatibility)
   static const List<int> reportDescriptor = [
     0x05, 0x01,       // Usage Page (Generic Desktop Ctrls)
     0x09, 0x05,       // Usage (Gamepad)
     0xA1, 0x01,       // Collection (Application)
     0x85, 0x01,       //   Report ID (1)
     
-    // Joystick Axes (Left Stick: X,Y; Right Stick: Z,Rz)
+    // Axes (6 axes: X, Y, Z, Rx, Ry, Rz) - Sequential Order [0x30..0x35]
+    // Matches Xbox/Linux Default mapping: Z/Rz for Triggers, Rx/Ry for Right Stick
     0x05, 0x01,       //   Usage Page (Generic Desktop Ctrls)
     0x09, 0x01,       //   Usage (Pointer)
     0xA1, 0x00,       //   Collection (Physical)
-    0x09, 0x30,       //     Usage (X)
-    0x09, 0x31,       //     Usage (Y)
-    0x09, 0x32,       //     Usage (Z)
-    0x09, 0x35,       //     Usage (Rz)
+    0x09, 0x30,       //     Usage (X)  -> Left Stick X
+    0x09, 0x31,       //     Usage (Y)  -> Left Stick Y
+    0x09, 0x32,       //     Usage (Z)  -> L2 Trigger (often used for Right Stick X on OLD gamepads, but modern use Triggers)
+                      //     Wait, standard HID often uses Rx/Ry for Right Stick.
+    0x09, 0x33,       //     Usage (Rx) -> Right Stick X
+    0x09, 0x34,       //     Usage (Ry) -> Right Stick Y
+    0x09, 0x35,       //     Usage (Rz) -> R2 Trigger
     0x15, 0x00,       //     Logical Minimum (0)
     0x26, 0xFF, 0x00, //     Logical Maximum (255)
     0x75, 0x08,       //     Report Size (8)
-    0x95, 0x04,       //     Report Count (4)
+    0x95, 0x06,       //     Report Count (6) - 6 bytes for 6 axes
     0x81, 0x02,       //     Input (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position)
     0xC0,             //   End Collection
     

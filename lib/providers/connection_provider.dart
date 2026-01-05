@@ -389,6 +389,8 @@ class ConnectionProvider with ChangeNotifier {
     required int ly,
     required int rx,
     required int ry,
+    int l2 = 0,
+    int r2 = 0,
     required int dpad,
   }) {
     switch (_connectionMode) {
@@ -400,6 +402,8 @@ class ConnectionProvider with ChangeNotifier {
           ly: ly,
           rx: rx,
           ry: ry,
+          l2: l2,
+          r2: r2,
           dpad: dpad,
         );
         break;
@@ -410,6 +414,8 @@ class ConnectionProvider with ChangeNotifier {
           ly: ly,
           rx: rx,
           ry: ry,
+          l2: l2,
+          r2: r2,
           dpad: dpad,
         );
         break;

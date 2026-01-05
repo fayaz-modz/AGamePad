@@ -404,6 +404,8 @@ class UDPGamepadService {
     required int ly,
     required int rx,
     required int ry,
+    int l2 = 0,
+    int r2 = 0,
     required int dpad,
   }) {
     if (!isConnected || _sender == null || _connectedDevice == null) {
@@ -427,22 +429,18 @@ class UDPGamepadService {
       // Matches OS expectations (DS4 style) for 6-axis HID:
       // Index 1 (0x30): LX
       // Index 2 (0x31): LY
-      // Index 3 (0x32): RX
-      // Index 4 (0x33): L2
-      // Index 5 (0x34): R2
-      // Index 6 (0x35): RY
+      // Index 3 (0x32): Z (L2)
+      // Index 4 (0x33): Rx
+      // Index 5 (0x34): Ry
+      // Index 6 (0x35): Rz (R2)
       final report = Uint8List(10);
       report[0] = 0x01; // Report ID 1
       report[1] = lx; // LX (Left X)
       report[2] = ly; // LY (Left Y)
-      report[3] = (buttons & 0x100) != 0 ? 255 : 0; // L2 -> Usage 0x32 (Z)
-      
+      report[3] = l2; // L2 -> Usage 0x32 (Z)
       report[4] = rx; // RX -> Usage 0x33 (Rx)
-      
       report[5] = ry; // RY -> Usage 0x34 (Ry)
-      
-      report[6] = (buttons & 0x200) != 0 ? 255 : 0; // R2 -> Usage 0x35 (Rz)
-
+      report[6] = r2; // R2 -> Usage 0x35 (Rz)
       report[7] = buttons & 0xFF;
       report[8] = (buttons >> 8) & 0xFF;
       report[9] = dpad;

@@ -130,8 +130,8 @@ class GamepadLayout {
 
   static GamepadLayout android() {
     return GamepadLayout(
-      id: 'xbox_default',
-      name: 'Xbox Style',
+      id: 'android_default',
+      name: 'Android',
       controls: [
         // Left side - use left edge positioning
         GamepadControl(
@@ -163,17 +163,19 @@ class GamepadLayout {
           joystickMapping: Joystick.right,
         ),
         GamepadControl(
-          id: 'abxy',
+          id: 'abxycz',
           type: ControlType.buttonCluster,
           right: 130, // Pixels from left
           bottom: 200, // Pixels from top
-          width: 160,
+          width: 240,
           height: 160,
           // Xbox Standard: A-Bottom, B-Right, X-Left, Y-Top
           clusterBottom: GamepadButton.button1,
           clusterRight: GamepadButton.button2,
           clusterLeft: GamepadButton.button3,
           clusterTop: GamepadButton.button4,
+          clusterC: GamepadButton.c,
+          clusterZ: GamepadButton.z,
         ),
 
         // Shoulders

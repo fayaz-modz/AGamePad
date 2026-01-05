@@ -37,6 +37,8 @@ class _GamepadPageState extends State<GamepadPage> {
   int _ly = 127;
   int _rx = 127;
   int _ry = 127;
+  int _l2 = 0;
+  int _r2 = 0;
   int _dpad = 8;
 
   // Last sent state to avoid redundant reports
@@ -45,6 +47,8 @@ class _GamepadPageState extends State<GamepadPage> {
   int _lastLy = 127;
   int _lastRx = 127;
   int _lastRy = 127;
+  int _lastL2 = 0;
+  int _lastR2 = 0;
   int _lastDpad = 8;
 
   // Batching flag to prevent multiple sends in same frame
@@ -159,6 +163,8 @@ class _GamepadPageState extends State<GamepadPage> {
           _ly == _lastLy &&
           _rx == _lastRx &&
           _ry == _lastRy &&
+          _l2 == _lastL2 &&
+          _r2 == _lastR2 &&
           _dpad == _lastDpad) {
         return;
       }
@@ -168,6 +174,8 @@ class _GamepadPageState extends State<GamepadPage> {
       _lastLy = _ly;
       _lastRx = _rx;
       _lastRy = _ry;
+      _lastL2 = _l2;
+      _lastR2 = _r2;
       _lastDpad = _dpad;
 
       _connectionProvider?.sendGamepadInput(
@@ -176,6 +184,8 @@ class _GamepadPageState extends State<GamepadPage> {
         ly: _ly,
         rx: _rx,
         ry: _ry,
+        l2: _l2,
+        r2: _r2,
         dpad: _dpad,
       );
     });
@@ -184,12 +194,16 @@ class _GamepadPageState extends State<GamepadPage> {
   void _onButtonDown(GamepadButton button) {
     if (_isEditing) return;
     _buttonMask.press(button);
+    if (button == GamepadButton.l2) _l2 = 255;
+    if (button == GamepadButton.r2) _r2 = 255;
     _sendUpdate();
   }
 
   void _onButtonUp(GamepadButton button) {
     if (_isEditing) return;
     _buttonMask.release(button);
+    if (button == GamepadButton.l2) _l2 = 0;
+    if (button == GamepadButton.r2) _r2 = 0;
     _sendUpdate();
   }
 
@@ -796,7 +810,6 @@ class _GamepadPageState extends State<GamepadPage> {
     // For D-pad, button cluster, joysticks, and shoulder buttons, enforce square dimensions
     final needsSquare =
         control.type == ControlType.dpad ||
-        control.type == ControlType.buttonCluster ||
         control.type == ControlType.joystick ||
         control.type == ControlType.shoulderButton;
     final actualWidth = needsSquare ? min(width, height) : width;
