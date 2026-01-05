@@ -54,7 +54,6 @@ class UDPDeviceInfo {
 class UDPGamepadService {
   static const int _broadcastPort = 2242;
   static const int _udpServerPort = 2243;
-  static const String _deviceDiscoveryMessage = 'discover';
   static const String _descriptorMagic = 'DESC';
   static const String _descriptorAck = 'DESC_OK';
   static const int _connectionPollIntervalMs = 2000;
@@ -118,7 +117,7 @@ class UDPGamepadService {
             '[UDPGamepadService] Failed to bind receiver to port $_broadcastPort: $e',
           );
         }
-        throw e;
+        rethrow;
       }
 
       // Create SENDER socket for sending data (on ephemeral port)
@@ -136,17 +135,18 @@ class UDPGamepadService {
         if (kDebugMode) {
           debugPrint('[UDPGamepadService] Failed to create sender socket: $e');
         }
-        throw e;
+        rethrow;
       }
 
       // Enable broadcast for sender
       try {
         _sender!.broadcastEnabled = true;
       } catch (e) {
-        if (kDebugMode)
+        if (kDebugMode) {
           debugPrint(
             '[UDPGamepadService] Warning: Broadcast enable failed: $e',
           );
+        }
       }
 
       // Setup single persistent listener for broadcasts on receiver socket
@@ -435,15 +435,13 @@ class UDPGamepadService {
       report[0] = 0x01; // Report ID 1
       report[1] = lx; // LX (Left X)
       report[2] = ly; // LY (Left Y)
-      report[3] = rx; // RX (Right X) -> Usage 0x32 (Z)
-
-      // L2 Trigger - Digital fallback to full axis -> Usage 0x33 (Rx)
-      report[4] = (buttons & 0x100) != 0 ? 255 : 0;
-
-      // R2 Trigger - Digital fallback to full axis -> Usage 0x34 (Ry)
-      report[5] = (buttons & 0x200) != 0 ? 255 : 0;
-
-      report[6] = ry; // RY (Right Y) -> Usage 0x35 (Rz)
+      report[3] = (buttons & 0x100) != 0 ? 255 : 0; // L2 -> Usage 0x32 (Z)
+      
+      report[4] = rx; // RX -> Usage 0x33 (Rx)
+      
+      report[5] = ry; // RY -> Usage 0x34 (Ry)
+      
+      report[6] = (buttons & 0x200) != 0 ? 255 : 0; // R2 -> Usage 0x35 (Rz)
 
       report[7] = buttons & 0xFF;
       report[8] = (buttons >> 8) & 0xFF;
@@ -483,7 +481,7 @@ class UDPGamepadService {
       // [ID, LX, LY, RX, L2, R2, RY, ButtonsL, ButtonsH, Hat]
       final packetToSend =
           _lastInputReport ??
-          Uint8List.fromList([0x01, 127, 127, 127, 0, 0, 127, 0, 0, 8]);
+          Uint8List.fromList([0x01, 127, 127, 0, 127, 127, 0, 0, 0, 8]);
 
       _sender!.send(
         packetToSend,

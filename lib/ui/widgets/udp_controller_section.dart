@@ -75,7 +75,7 @@ class _UDPControllerSectionState extends State<UDPControllerSection> {
                             _stopListening();
                           }
                         },
-                        activeColor: Colors.blue,
+                        activeTrackColor: Colors.blue,
                       ),
                       const SizedBox(width: 8),
                       _buildConnectionStatus(provider),
@@ -230,7 +230,7 @@ class _UDPControllerSectionState extends State<UDPControllerSection> {
                     ),
             ),
           );
-        }).toList(),
+        }),
       ],
     );
   }

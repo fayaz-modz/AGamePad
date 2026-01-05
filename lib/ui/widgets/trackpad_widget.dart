@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:agamepad/ui/widgets/inner_shadow_painter.dart';
 
 class TrackpadWidget extends StatefulWidget {
   final Function(int dx, int dy, int buttons)? onPointerReport;
@@ -17,7 +18,7 @@ class TrackpadWidget extends StatefulWidget {
 class _TrackpadWidgetState extends State<TrackpadWidget> {
   bool _isTouched = false;
   Offset _touchPosition = Offset.zero;
-  
+
   // For tap detection
   DateTime? _lastDownTime;
   Offset? _lastDownPos;
@@ -62,7 +63,7 @@ class _TrackpadWidgetState extends State<TrackpadWidget> {
       final now = DateTime.now();
       final diff = now.difference(_lastDownTime!);
       final dist = (event.localPosition - _lastDownPos!).distance;
-      
+
       if (diff < _tapDuration && dist < _tapSlop) {
         // It's a tap! Send a left click (button bit 1)
         _sendTap();
@@ -92,59 +93,97 @@ class _TrackpadWidgetState extends State<TrackpadWidget> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final size = Size(constraints.maxWidth, constraints.maxHeight);
-        
-        return Container(
-          decoration: BoxDecoration(
-            color: _isTouched 
-                ? Colors.blueAccent.withValues(alpha: 0.2) 
-                : Colors.white.withValues(alpha: 0.05),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: _isTouched ? Colors.blueAccent : Colors.white24,
-              width: 2,
-            ),
-          ),
-          child: Listener(
-            behavior: HitTestBehavior.opaque,
-            onPointerDown: (e) => _handlePointerDown(e, size),
-            onPointerMove: (e) => _handlePointerMove(e, size),
-            onPointerUp: (e) => _handlePointerUp(e),
-            onPointerCancel: (_) => _handleRelease(),
-            child: Stack(
-              children: [
-                Center(
-                  child: Text(
-                    widget.label,
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: _isTouched ? 0.5 : 0.2),
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 2,
-                    ),
+
+        return SizedBox(
+          width: size.width,
+          height: size.height,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              // Static Background
+              RepaintBoundary(
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    color: Colors.white.withValues(alpha: _isTouched ? 0.25 : 0.15),
                   ),
-                ),
-                if (_isTouched)
-                  Positioned(
-                    left: _touchPosition.dx * size.width - 20,
-                    top: _touchPosition.dy * size.height - 20,
-                    child: Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Colors.blueAccent.withValues(alpha: 0.4),
-                        border: Border.all(color: Colors.blueAccent, width: 2),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.blueAccent.withValues(alpha: 0.3),
-                            blurRadius: 10,
-                            spreadRadius: 2,
+                  child: CustomPaint(
+                    painter: InnerShadowPainter(
+                      shape: BoxShape.rectangle,
+                      borderRadius: BorderRadius.circular(12),
+                      shadows: [
+                        BoxShadow(
+                          color: Colors.white.withValues(alpha: 0.2),
+                          blurRadius: 15,
+                          spreadRadius: 6,
+                          offset: const Offset(3, 3),
+                        ),
+                        BoxShadow(
+                          color: Colors.white.withValues(alpha: 0.1),
+                          blurRadius: 8,
+                          spreadRadius: 2,
+                          offset: const Offset(1, 1),
+                        ),
+                      ],
+                    ),
+                    child: Center(
+                      child: Text(
+                        widget.label,
+                        style: TextStyle(
+                          color: Colors.white.withValues(
+                            alpha: _isTouched ? 0.8 : 0.5,
                           ),
-                        ],
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 2,
+                        ),
                       ),
                     ),
                   ),
-              ],
-            ),
+                ),
+              ),
+
+              // Interactive Layer
+              Listener(
+                behavior: HitTestBehavior.translucent,
+                onPointerDown: (e) => _handlePointerDown(e, size),
+                onPointerMove: (e) => _handlePointerMove(e, size),
+                onPointerUp: (e) => _handlePointerUp(e),
+                onPointerCancel: (_) => _handleRelease(),
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    if (_isTouched)
+                      Positioned(
+                        left: _touchPosition.dx * size.width - 20,
+                        top: _touchPosition.dy * size.height - 20,
+                        child: RepaintBoundary(
+                          child: Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.white.withValues(alpha: 0.2),
+                            ),
+                            child: CustomPaint(
+                              painter: InnerShadowPainter(
+                                shape: BoxShape.circle,
+                                shadows: [
+                                  BoxShadow(
+                                    color: Colors.white.withValues(alpha: 0.25),
+                                    blurRadius: 12,
+                                    spreadRadius: 3,
+                                    offset: const Offset(2, 2),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ],
           ),
         );
       },

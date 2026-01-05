@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:agamepad/ui/widgets/inner_shadow_painter.dart';
 
 class CircularDPad extends StatefulWidget {
   final ValueChanged<int> onDown;
@@ -33,7 +34,26 @@ class _CircularDPadState extends State<CircularDPad> {
     return s;
   }
 
+  // Cache paths to avoid parsing SVG on every paint
+  late final DPadPaths _paths;
+
   @override
+  void initState() {
+    super.initState();
+    _paths = DPadPaths();
+    _paths.update(widget.size);
+  }
+
+  @override
+  void didUpdateWidget(CircularDPad oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.size != widget.size) {
+      _paths.update(widget.size);
+    }
+  }
+
+  @override
+
   Widget build(BuildContext context) {
     return SizedBox.square(
       dimension: widget.size,
@@ -43,7 +63,10 @@ class _CircularDPadState extends State<CircularDPad> {
         onPointerUp: (_) => _handleUp(),
         onPointerCancel: (_) => _handleUp(),
         child: CustomPaint(
-          painter: _DPadPainter(activeSectors: _activeVisualSectors),
+          painter: _DPadPainter(
+            activeSectors: _activeVisualSectors,
+            paths: _paths,
+          ),
         ),
       ),
     );
@@ -140,84 +163,48 @@ class _CircularDPadState extends State<CircularDPad> {
   }
 }
 
-class _DPadPainter extends CustomPainter {
-  final Set<int> activeSectors;
+class DPadPaths {
+  final Path rightPath = Path();
+  final Path upPath = Path();
+  final Path downPath = Path();
+  final Path leftPath = Path();
 
-  _DPadPainter({required this.activeSectors});
+  void update(double size) {
+    final center = Offset(size / 2, size / 2);
+    final scale = size / 256;
 
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
-    final scale = size.width / 256; // Scale from SVG coordinates to widget size
+    rightPath.reset();
+    upPath.reset();
+    downPath.reset();
+    leftPath.reset();
 
-    final bgPaint = Paint()
-      ..color = Colors.grey[900]!
-      ..style = PaintingStyle.fill;
-
-    final highlightPaint = Paint()
-      ..color = Colors.blue.withValues(alpha: 0.6)
-      ..style = PaintingStyle.fill;
-
-    // Right segment path (exact copy from SVG)
-    final rightPath = Path();
     _createPathFromSVGData(
       rightPath,
       "M176.682 92.4564C180.085 89.0376 184.701 87.1169 189.514 87.1169H221.981C235.863 87.1169 247.117 98.4218 247.117 112.367V142.867C247.117 156.812 235.863 168.117 221.981 168.117H189.514C184.701 168.117 180.085 166.196 176.682 162.777C169.14 155.201 155.38 141.379 147.547 133.511C144.307 130.256 144.307 124.978 147.547 121.723C155.38 113.855 169.14 100.033 176.682 92.4564Z",
       scale,
       center,
     );
-    _drawPath(canvas, rightPath, bgPaint, highlightPaint, 2);
 
-    // Up segment path (exact copy from SVG)
-    final upPath = Path();
     _createPathFromSVGData(
       upPath,
       "M92.4564 78.5521C89.0377 75.1487 87.1169 70.5327 87.1169 65.7196V33.2531C87.1169 19.3707 98.4218 8.11694 112.367 8.11694H142.867C156.812 8.11694 168.117 19.3707 168.117 33.2531V65.7196C168.117 70.5327 166.196 75.1487 162.777 78.5521C155.201 86.0944 141.379 99.8539 133.511 107.687C130.256 110.927 124.978 110.927 121.723 107.687C113.855 99.8539 100.033 86.0944 92.4564 78.5521Z",
       scale,
       center,
     );
-    _drawPath(canvas, upPath, bgPaint, highlightPaint, 0);
 
-    // Down segment path (exact copy from SVG)
-    final downPath = Path();
     _createPathFromSVGData(
       downPath,
       "M162.777 176.682C166.196 180.085 168.117 184.701 168.117 189.514V221.981C168.117 235.863 156.812 247.117 142.867 247.117H112.367C98.4218 247.117 87.1169 235.863 87.1169 221.981V189.514C87.1169 184.701 89.0377 180.085 92.4564 176.682C100.033 169.14 113.855 155.38 121.723 147.547C124.978 144.307 130.256 144.307 133.511 147.547C141.379 155.38 155.201 169.14 162.777 176.682Z",
       scale,
       center,
     );
-    _drawPath(canvas, downPath, bgPaint, highlightPaint, 4);
 
-    // Left segment path (exact copy from SVG)
-    final leftPath = Path();
     _createPathFromSVGData(
       leftPath,
       "M78.5521 162.777C75.1487 166.196 70.5327 168.117 65.7196 168.117H33.2531C19.3707 168.117 8.11694 156.812 8.11694 142.867V112.367C8.11694 98.4218 19.3707 87.1169 33.2531 87.1169H65.7196C70.5327 87.1169 75.1487 89.0376 78.5521 92.4564C86.0944 100.033 99.854 113.855 107.687 121.723C110.927 124.978 110.927 130.256 107.687 133.511C99.854 141.379 86.0944 155.201 78.5521 162.777Z",
       scale,
       center,
     );
-    _drawPath(canvas, leftPath, bgPaint, highlightPaint, 6);
-  }
-
-  void _drawArrow(
-    Canvas canvas,
-    Offset center,
-    double distance,
-    double angleDeg,
-    Paint paint,
-  ) {
-    canvas.save();
-    canvas.translate(center.dx, center.dy);
-    canvas.rotate(angleDeg * pi / 180);
-
-    final path = Path();
-    path.moveTo(distance + 15, 0);
-    path.lineTo(distance - 5, -12);
-    path.lineTo(distance - 5, 12);
-    path.close();
-
-    canvas.drawPath(path, paint);
-    canvas.restore();
   }
 
   void _createPathFromSVGData(
@@ -314,58 +301,55 @@ class _DPadPainter extends CustomPainter {
       }
     }
   }
+}
 
-  void _drawPathFromSVG(
-    Path path,
-    List<List<double>> points,
-    double scale,
-    Offset center,
-  ) {
-    if (points.isNotEmpty) {
-      path.moveTo(
-        center.dx + (points[0][0] - 128) * scale,
-        center.dy + (points[0][1] - 128) * scale,
-      );
-      for (int i = 1; i < points.length; i++) {
-        path.lineTo(
-          center.dx + (points[i][0] - 128) * scale,
-          center.dy + (points[i][1] - 128) * scale,
-        );
-      }
-      path.close();
-    }
+class _DPadPainter extends CustomPainter {
+  final Set<int> activeSectors;
+  final DPadPaths paths;
+
+  _DPadPainter({required this.activeSectors, required this.paths});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    _drawPath(canvas, paths.rightPath, 2);
+    _drawPath(canvas, paths.upPath, 0);
+    _drawPath(canvas, paths.downPath, 4);
+    _drawPath(canvas, paths.leftPath, 6);
   }
 
   void _drawPath(
     Canvas canvas,
     Path path,
-    Paint bgPaint,
-    Paint highlightPaint,
     int direction,
   ) {
     final isActive = activeSectors.contains(direction);
-    final paint = isActive ? highlightPaint : bgPaint;
-    canvas.drawPath(path, paint);
-  }
+    
+    // 1. Draw Background Fill
+    final fillPaint = Paint()
+      ..color = Colors.white.withValues(alpha: isActive ? 0.25 : 0.15)
+      ..style = PaintingStyle.fill;
+    
+    canvas.drawPath(path, fillPaint);
 
-  void _drawRoundedRectSegment(
-    Canvas canvas,
-    Offset segmentCenter,
-    double width,
-    double height,
-    Paint bgPaint,
-    Paint highlightPaint,
-    int direction,
-  ) {
-    final isActive = activeSectors.contains(direction);
-    final paint = isActive ? highlightPaint : bgPaint;
-
-    final rect = RRect.fromRectAndRadius(
-      Rect.fromCenter(center: segmentCenter, width: width, height: height),
-      Radius.circular(min(width, height) * 0.15),
+    // 2. Draw Inner Shadows
+    InnerShadowRenderer.paint(
+      canvas,
+      shapePath: path,
+      shadows: [
+        BoxShadow(
+          color: Colors.white.withValues(alpha: isActive ? 0.3 : 0.2), // Reduced opacity
+          blurRadius: 15,
+          spreadRadius: 6,
+          offset: const Offset(3, 3),
+        ),
+        BoxShadow(
+          color: Colors.white.withValues(alpha: isActive ? 0.15 : 0.1), // Reduced opacity
+          blurRadius: 8,
+          spreadRadius: 2,
+          offset: const Offset(1, 1),
+        ),
+      ],
     );
-
-    canvas.drawRRect(rect, paint);
   }
 
   @override

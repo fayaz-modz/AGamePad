@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:agamepad/ui/widgets/inner_shadow_painter.dart';
 import '../../models/gamepad_descriptor.dart';
 
 enum ShoulderButtonType {
@@ -35,13 +36,17 @@ class _ShoulderButtonState extends State<ShoulderButton> {
   @override
   Widget build(BuildContext context) {
     // Determine rotation angle based on left/right side
-    final isLeftShoulder = widget.type == ShoulderButtonType.l1 || 
-                           widget.type == ShoulderButtonType.l2;
-    final rotation = isLeftShoulder ? -45.0 : 45.0; // -45 for left, 45 for right
-    
+    final isLeftShoulder =
+        widget.type == ShoulderButtonType.l1 ||
+        widget.type == ShoulderButtonType.l2;
+    final rotation = isLeftShoulder
+        ? -45.0
+        : 45.0; // -45 for left, 45 for right
+
     // Determine if this is a top button (L1/R1) or bottom button (L2/R2)
-    final isTopButton = widget.type == ShoulderButtonType.l1 || 
-                        widget.type == ShoulderButtonType.r1;
+    final isTopButton =
+        widget.type == ShoulderButtonType.l1 ||
+        widget.type == ShoulderButtonType.r1;
 
     return Transform.rotate(
       angle: rotation * pi / 180, // Convert degrees to radians
@@ -59,50 +64,67 @@ class _ShoulderButtonState extends State<ShoulderButton> {
           widget.onUp(widget.button);
           setState(() => _isPressed = false);
         },
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 50),
+        child: Container(
           decoration: BoxDecoration(
-            // Custom border radius - only one side circular, base is flat with small corners
             borderRadius: isTopButton
                 ? const BorderRadius.only(
-                    topLeft: Radius.circular(100), // Top circular
+                    topLeft: Radius.circular(100),
                     topRight: Radius.circular(100),
-                    bottomLeft: Radius.circular(16), // Bottom flat with rounded corners
+                    bottomLeft: Radius.circular(16),
                     bottomRight: Radius.circular(16),
                   )
                 : const BorderRadius.only(
-                    bottomLeft: Radius.circular(100), // Bottom circular
+                    bottomLeft: Radius.circular(100),
                     bottomRight: Radius.circular(100),
-                    topLeft: Radius.circular(16), // Top flat with rounded corners
+                    topLeft: Radius.circular(16),
                     topRight: Radius.circular(16),
                   ),
-            color: _isPressed
-                ? Colors.blueAccent.withValues(alpha: 0.5)
-                : Colors.grey[800],
-            border: Border.all(
-              color: _isPressed ? Colors.blueAccent : Colors.white54,
-              width: _isPressed ? 2 : 1,
-            ),
-            boxShadow: _isPressed
-                ? [
-                    BoxShadow(
-                      color: Colors.blueAccent.withValues(alpha: 0.5),
-                      blurRadius: 10,
-                      spreadRadius: 1,
-                    ),
-                  ]
-                : [],
+            color: Colors.white.withValues(alpha: _isPressed ? 0.25 : 0.15),
           ),
-          child: Center(
-            child: Transform.rotate(
-              angle: -rotation * pi / 180, // Counter-rotate the text
-              alignment: Alignment.center,
-              child: Text(
-                widget.label,
-                style: TextStyle(
-                  color: _isPressed ? Colors.white : Colors.white,
-                  fontWeight: _isPressed ? FontWeight.bold : FontWeight.normal,
-                  fontSize: 12,
+          child: CustomPaint(
+            painter: InnerShadowPainter(
+              shape: BoxShape.rectangle,
+              borderRadius: isTopButton
+                  ? const BorderRadius.only(
+                      topLeft: Radius.circular(100),
+                      topRight: Radius.circular(100),
+                      bottomLeft: Radius.circular(16),
+                      bottomRight: Radius.circular(16),
+                    )
+                  : const BorderRadius.only(
+                      bottomLeft: Radius.circular(100),
+                      bottomRight: Radius.circular(100),
+                      topLeft: Radius.circular(16),
+                      topRight: Radius.circular(16),
+                    ),
+              shadows: [
+                BoxShadow(
+                  color: Colors.white.withValues(alpha: _isPressed ? 0.3 : 0.2), // Reduced opacity
+                  blurRadius: 15,
+                  spreadRadius: 6,
+                  offset: const Offset(3, 3),
+                ),
+                BoxShadow(
+                  color: Colors.white.withValues(alpha: _isPressed ? 0.15 : 0.1), // Reduced opacity
+                  blurRadius: 8,
+                  spreadRadius: 2,
+                  offset: const Offset(1, 1),
+                ),
+              ],
+            ),
+            child: Center(
+              child: Transform.rotate(
+                angle: -rotation * pi / 180,
+                alignment: Alignment.center,
+                child: Text(
+                  widget.label,
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.9),
+                    fontWeight: _isPressed
+                        ? FontWeight.bold
+                        : FontWeight.normal,
+                    fontSize: 12,
+                  ),
                 ),
               ),
             ),

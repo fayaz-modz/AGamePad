@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:agamepad/ui/widgets/inner_shadow_painter.dart';
 import '../../models/gamepad_descriptor.dart';
 
 class ButtonCluster extends StatelessWidget {
@@ -143,7 +144,7 @@ class ButtonCluster extends StatelessWidget {
 
 class _RoundButton extends StatefulWidget {
   final String label;
-  final Color color;
+  final Color color; // Kept for API compatibility but not used
   final GamepadButton button;
   final void Function(GamepadButton) onDown;
   final void Function(GamepadButton) onUp;
@@ -162,44 +163,52 @@ class _RoundButtonState extends State<_RoundButton> {
   Widget build(BuildContext context) {
     return Listener(
       onPointerDown: (_) {
-        widget.onDown(widget.button);  // Send input first for lowest latency
+        widget.onDown(widget.button);
         setState(() => _isPressed = true);
       },
       onPointerUp: (_) {
-        widget.onUp(widget.button);  // Send input first for lowest latency
+        widget.onUp(widget.button);
         setState(() => _isPressed = false);
       },
       onPointerCancel: (_) {
-        widget.onUp(widget.button);  // Send input first for lowest latency
+        widget.onUp(widget.button);
         setState(() => _isPressed = false);
       },
 
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 50),
+      child: Container(
         width: widget.size,
         height: widget.size,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: _isPressed
-              ? widget.color.withValues(alpha: 1.0)
-              : widget.color.withValues(alpha: 0.6),
-          border: Border.all(
-            color: _isPressed ? Colors.white : Colors.white70,
-            width: _isPressed ? 4 : 2
-          ),
-          boxShadow: _isPressed
-              ? [BoxShadow(color: widget.color.withValues(alpha: 0.8), blurRadius: 15, spreadRadius: 2)]
-              : [],
+          color: Colors.white.withValues(alpha: _isPressed ? 0.25 : 0.15),
         ),
-        child: Center(
-          child: Text(
-            widget.label,
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: widget.size * 0.4,
-              color: Colors.white,
-              shadows: [Shadow(blurRadius: 2, color: Colors.black)]
-            )
+        child: CustomPaint(
+          painter: InnerShadowPainter(
+            shape: BoxShape.circle,
+            shadows: [
+              BoxShadow(
+                color: Colors.white.withValues(alpha: _isPressed ? 0.3 : 0.2), // Reduced opacity
+                blurRadius: 15,
+                spreadRadius: 6,
+                offset: const Offset(3, 3), 
+              ),
+              BoxShadow(
+                color: Colors.white.withValues(alpha: _isPressed ? 0.15 : 0.1), // Reduced opacity
+                blurRadius: 8,
+                spreadRadius: 2,
+                offset: const Offset(1, 1),
+              ),
+            ],
+          ),
+          child: Center(
+            child: Text(
+              widget.label,
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: widget.size * 0.4,
+                color: Colors.white.withValues(alpha: 0.9),
+              )
+            ),
           ),
         ),
       ),

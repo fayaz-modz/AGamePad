@@ -12,6 +12,7 @@ import '../widgets/circular_dpad.dart';
 import '../widgets/button_cluster.dart';
 import '../widgets/trackpad_widget.dart';
 import '../widgets/shoulder_button.dart';
+import '../widgets/inner_shadow_painter.dart';
 
 class GamepadPage extends StatefulWidget {
   const GamepadPage({super.key});
@@ -28,7 +29,6 @@ class _GamepadPageState extends State<GamepadPage> {
   late GamepadDescriptor _descriptor;
   late ButtonMaskBuilder _buttonMask;
 
-  bool _isInit = false;
   bool _isEditing = false;
   GamepadControl? _selectedControl;
 
@@ -69,19 +69,19 @@ class _GamepadPageState extends State<GamepadPage> {
     });
   }
 
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (_connectionProvider == null) {
-      _connectionProvider = Provider.of<ConnectionProvider>(
-        context,
-        listen: false,
-      );
-      if (_isInit == false) {
-        _loadLayout();
-      }
-    }
-  }
+  // @override
+  // void didChangeDependencies() {
+  //   super.didChangeDependencies();
+  //   if (_connectionProvider == null) {
+  //     _connectionProvider = Provider.of<ConnectionProvider>(
+  //       context,
+  //       listen: false,
+  //     );
+  //     if (_isInit == false) {
+  //       _loadLayout();
+  //     }
+  //   }
+  // }
 
   @override
   void dispose() {
@@ -94,21 +94,21 @@ class _GamepadPageState extends State<GamepadPage> {
     super.dispose();
   }
 
-  @override
-  void reassemble() {
-    super.reassemble();
-    // Reload layout on hot reload - for default layouts, reload from source
-    if (_isInit) {
-      setState(() {
-        if (_layout.id == 'xbox_default') {
-          _layout = GamepadLayout.xbox();
-        } else if (_layout.id == 'android_default') {
-          _layout = GamepadLayout.android();
-        }
-        // Custom layouts will keep their current state
-      });
-    }
-  }
+  // @override
+  // void reassemble() {
+  //   super.reassemble();
+  //   // Reload layout on hot reload - for default layouts, reload from source
+  //   if (_isInit) {
+  //     setState(() {
+  //       if (_layout.id == 'xbox_default') {
+  //         _layout = GamepadLayout.xbox();
+  //       } else if (_layout.id == 'android_default') {
+  //         _layout = GamepadLayout.android();
+  //       }
+  //       // Custom layouts will keep their current state
+  //     });
+  //   }
+  // }
 
   void _loadLayout() async {
     final args = ModalRoute.of(context)!.settings.arguments;
@@ -135,7 +135,7 @@ class _GamepadPageState extends State<GamepadPage> {
     _connectionProvider?.startKeepalive();
 
     setState(() {
-      _isInit = true;
+      // _isInit = true;
     });
   }
 
@@ -500,7 +500,7 @@ class _GamepadPageState extends State<GamepadPage> {
     final size = MediaQuery.of(context).size;
 
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: const Color(0xFF111111),
       body: Stack(
         clipBehavior: Clip.none, // Allow controls to overflow without clipping
         children: [
@@ -802,11 +802,6 @@ class _GamepadPageState extends State<GamepadPage> {
     final actualWidth = needsSquare ? min(width, height) : width;
     final actualHeight = needsSquare ? min(width, height) : height;
 
-    // Calculate the effective relative dimensions used for clamping
-    // This fixes the issue where visual size < bounding box size preventing edge movement
-    final effectiveRelWidth = actualWidth / screenSize.width;
-    final effectiveRelHeight = actualHeight / screenSize.height;
-
     Widget child = _renderWidgetForControl(control);
 
     // Highlight if selected
@@ -819,7 +814,7 @@ class _GamepadPageState extends State<GamepadPage> {
             BoxShadow(
               color: Colors.greenAccent.withValues(alpha: 0.3),
               blurRadius: 10,
-              spreadRadius: 2,
+              spreadRadius: 8,
             ),
           ],
         ),
@@ -990,41 +985,53 @@ class _OptionButtonState extends State<_OptionButton> {
   Widget build(BuildContext context) {
     return Listener(
       onPointerDown: (_) {
-        widget.onDown(); // Send input first for lowest latency
+        widget.onDown();
         setState(() => _isPressed = true);
       },
       onPointerUp: (_) {
-        widget.onUp(); // Send input first for lowest latency
+        widget.onUp();
         setState(() => _isPressed = false);
       },
       onPointerCancel: (_) {
-        widget.onUp(); // Send input first for lowest latency
+        widget.onUp();
         setState(() => _isPressed = false);
       },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 50),
+      child: Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(8),
-          color: _isPressed ? Colors.cyanAccent : Colors.blue[700],
-          border: Border.all(
-            color: _isPressed ? Colors.white : Colors.cyan,
-            width: 2,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.cyan.withValues(alpha: 0.4),
-              blurRadius: 4,
-              offset: const Offset(0, 2),
-            ),
-          ],
+          color: Colors.white.withValues(alpha: _isPressed ? 0.25 : 0.15),
         ),
-        child: Center(
-          child: Text(
-            widget.label,
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
+        child: CustomPaint(
+          painter: InnerShadowPainter(
+            shape: BoxShape.rectangle,
+            borderRadius: BorderRadius.circular(8),
+            shadows: [
+              BoxShadow(
+                color: Colors.white.withValues(
+                  alpha: _isPressed ? 0.3 : 0.2,
+                ), // Reduced opacity
+                blurRadius: 15,
+                spreadRadius: 6,
+                offset: const Offset(3, 3),
+              ),
+              BoxShadow(
+                color: Colors.white.withValues(
+                  alpha: _isPressed ? 0.15 : 0.1,
+                ), // Reduced opacity
+                blurRadius: 8,
+                spreadRadius: 2,
+                offset: const Offset(1, 1),
+              ),
+            ],
+          ),
+          child: Center(
+            child: Text(
+              widget.label,
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.9),
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
         ),

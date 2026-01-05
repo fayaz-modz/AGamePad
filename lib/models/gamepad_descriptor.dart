@@ -244,16 +244,16 @@ class GamepadDescriptor {
     0x85, 0x01,       //   Report ID (1)
     
     // Axes (6 axes: X, Y, Z, Rx, Ry, Rz) - Sequential Order [0x30..0x35]
-    // Matches DS4 style mapping: 0x32/0x35 for RS, 0x33/0x34 for Triggers
+    // Matches Xbox/Linux Default mapping: Z/Rz for Triggers, Rx/Ry for Right Stick
     0x05, 0x01,       //   Usage Page (Generic Desktop Ctrls)
     0x09, 0x01,       //   Usage (Pointer)
     0xA1, 0x00,       //   Collection (Physical)
     0x09, 0x30,       //     Usage (X)  -> Left Stick X
     0x09, 0x31,       //     Usage (Y)  -> Left Stick Y
-    0x09, 0x32,       //     Usage (Z)  -> Right Stick X
-    0x09, 0x33,       //     Usage (Rx) -> L2 Trigger
-    0x09, 0x34,       //     Usage (Ry) -> R2 Trigger
-    0x09, 0x35,       //     Usage (Rz) -> Right Stick Y
+    0x09, 0x32,       //     Usage (Z)  -> L2 Trigger
+    0x09, 0x33,       //     Usage (Rx) -> Right Stick X
+    0x09, 0x34,       //     Usage (Ry) -> Right Stick Y
+    0x09, 0x35,       //     Usage (Rz) -> R2 Trigger
     0x15, 0x00,       //     Logical Minimum (0)
     0x26, 0xFF, 0x00, //     Logical Maximum (255)
     0x75, 0x08,       //     Report Size (8)

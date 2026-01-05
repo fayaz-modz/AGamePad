@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:agamepad/ui/widgets/inner_shadow_painter.dart';
 
 class VirtualJoystick extends StatefulWidget {
   final ValueChanged<Offset> onChanged;
@@ -56,63 +57,108 @@ class _VirtualJoystickState extends State<VirtualJoystick> {
         final knobSize = actualSize / 2.0; // Increased from 2.5 to 2.0 for bigger knob
 
         return Center(
-          child: Container(
+          child: SizedBox(
             width: actualSize,
             height: actualSize,
-            clipBehavior: Clip.none, // Allow knob to overflow outside the circle
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: Colors.white.withValues(alpha: 0.1),
-              border: Border.all(color: Colors.white30),
-            ),
-            child: Listener(
-              behavior: HitTestBehavior.opaque,
-              onPointerDown: (event) {
-                // Only accept if we don't have an active pointer
-                if (_activePointerId == null) {
-                  _activePointerId = event.pointer;
-                  _updatePosition(event.localPosition, actualSize);
-                }
-              },
-              onPointerMove: (event) {
-                // Only respond to our tracked pointer
-                if (_activePointerId == event.pointer) {
-                  _updatePosition(event.localPosition, actualSize);
-                }
-              },
-              onPointerUp: (event) {
-                // Only reset if it's our tracked pointer
-                if (_activePointerId == event.pointer) {
-                  _activePointerId = null;
-                  _reset();
-                }
-              },
-              onPointerCancel: (event) {
-                // Only reset if it's our tracked pointer
-                if (_activePointerId == event.pointer) {
-                  _activePointerId = null;
-                  _reset();
-                }
-              },
-              child: Stack(
-                clipBehavior: Clip.none, // Allow knob to overflow the Stack
-                children: [
-                  // Use a positioned widget to place the knob so its center
-                  // aligns with the parent circumference at max displacement
-                  Positioned(
-                    left: (actualSize / 2) + (_alignment.x * (actualSize / 2)) - (knobSize / 2),
-                    top: (actualSize / 2) + (_alignment.y * (actualSize / 2)) - (knobSize / 2),
-                    child: Container(
-                      width: knobSize,
-                      height: knobSize,
-                      decoration: const BoxDecoration(
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                // Static Background with Shadows
+                RepaintBoundary(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.white.withValues(alpha: 0.15),
+                    ),
+                    child: CustomPaint(
+                      painter: InnerShadowPainter(
                         shape: BoxShape.circle,
-                        color: Colors.blueAccent,
+                        shadows: [
+                          BoxShadow(
+                            color: Colors.white.withValues(alpha: 0.2),
+                            blurRadius: 20,
+                            spreadRadius: 6,
+                            offset: const Offset(3, 3),
+                          ),
+                          BoxShadow(
+                            color: Colors.white.withValues(alpha: 0.1),
+                            blurRadius: 10,
+                            spreadRadius: 2,
+                            offset: const Offset(1, 1),
+                          ),
+                        ],
                       ),
+                      child: Container(), // Empty child for CustomPaint
                     ),
                   ),
-                ],
-              ),
+                ),
+
+                // Interactive Layer
+                Listener(
+                  behavior: HitTestBehavior.translucent,
+                  onPointerDown: (event) {
+                    if (_activePointerId == null) {
+                      _activePointerId = event.pointer;
+                      _updatePosition(event.localPosition, actualSize);
+                    }
+                  },
+                  onPointerMove: (event) {
+                    if (_activePointerId == event.pointer) {
+                      _updatePosition(event.localPosition, actualSize);
+                    }
+                  },
+                  onPointerUp: (event) {
+                    if (_activePointerId == event.pointer) {
+                      _activePointerId = null;
+                      _reset();
+                    }
+                  },
+                  onPointerCancel: (event) {
+                    if (_activePointerId == event.pointer) {
+                      _activePointerId = null;
+                      _reset();
+                    }
+                  },
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      // Knob
+                      Positioned(
+                        left: (actualSize / 2) +
+                            (_alignment.x * (actualSize / 2)) -
+                            (knobSize / 2),
+                        top: (actualSize / 2) +
+                            (_alignment.y * (actualSize / 2)) -
+                            (knobSize / 2),
+                        child: RepaintBoundary(
+                          child: Container(
+                            width: knobSize,
+                            height: knobSize,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.white.withValues(alpha: 0.2),
+                            ),
+                            child: CustomPaint(
+                              painter: InnerShadowPainter(
+                                shape: BoxShape.circle,
+                                shadows: [
+                                  BoxShadow(
+                                    color:
+                                        Colors.white.withValues(alpha: 0.25),
+                                    blurRadius: 12,
+                                    spreadRadius: 3,
+                                    offset: const Offset(2, 2),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
         );
