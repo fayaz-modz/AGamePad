@@ -8,9 +8,7 @@ import 'ui/pages/gamepad_page.dart';
 void main() {
   runApp(
     MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => ConnectionProvider()),
-      ],
+      providers: [ChangeNotifierProvider(create: (_) => ConnectionProvider())],
       child: const AgamepadApp(),
     ),
   );
@@ -24,7 +22,10 @@ class AgamepadApp extends StatelessWidget {
     return MaterialApp(
       title: 'AGamepad',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple, brightness: Brightness.dark),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.deepPurple,
+          brightness: Brightness.dark,
+        ),
         useMaterial3: true,
       ),
       initialRoute: '/',

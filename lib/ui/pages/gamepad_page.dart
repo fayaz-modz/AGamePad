@@ -25,8 +25,8 @@ class _GamepadPageState extends State<GamepadPage> {
   final LayoutStorageService _storage = LayoutStorageService();
   ConnectionProvider? _connectionProvider;
 
-  late GamepadLayout _layout;
-  late GamepadDescriptor _descriptor;
+  GamepadLayout _layout = GamepadLayout.xbox();
+  GamepadDescriptor _descriptor = GamepadDescriptor();
   late ButtonMaskBuilder _buttonMask;
 
   bool _isEditing = false;

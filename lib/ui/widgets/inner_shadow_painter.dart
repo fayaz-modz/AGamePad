@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:math';
+import 'package:flutter/foundation.dart';
 
 /// Helper class to render inner shadows on any given path.
 class InnerShadowRenderer {
@@ -152,9 +153,9 @@ class InnerShadowPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(InnerShadowPainter oldDelegate) {
-    return oldDelegate.shadows != shadows ||
-           oldDelegate.shape != shape ||
-           oldDelegate.borderRadius != borderRadius ||
-           oldDelegate.path != path;
+    return oldDelegate.shape != shape ||
+        oldDelegate.borderRadius != borderRadius ||
+        oldDelegate.path != path ||
+        !listEquals(oldDelegate.shadows, shadows);
   }
 }

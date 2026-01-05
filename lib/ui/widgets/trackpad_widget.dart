@@ -101,41 +101,39 @@ class _TrackpadWidgetState extends State<TrackpadWidget> {
             clipBehavior: Clip.none,
             children: [
               // Static Background
-              RepaintBoundary(
-                child: Container(
-                  decoration: BoxDecoration(
+              Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  color: Colors.white.withValues(alpha: _isTouched ? 0.25 : 0.15),
+                ),
+                child: CustomPaint(
+                  painter: InnerShadowPainter(
+                    shape: BoxShape.rectangle,
                     borderRadius: BorderRadius.circular(12),
-                    color: Colors.white.withValues(alpha: _isTouched ? 0.25 : 0.15),
+                    shadows: [
+                      BoxShadow(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        blurRadius: 15,
+                        spreadRadius: 6,
+                        offset: const Offset(3, 3),
+                      ),
+                      BoxShadow(
+                        color: Colors.white.withValues(alpha: 0.1),
+                        blurRadius: 8,
+                        spreadRadius: 2,
+                        offset: const Offset(1, 1),
+                      ),
+                    ],
                   ),
-                  child: CustomPaint(
-                    painter: InnerShadowPainter(
-                      shape: BoxShape.rectangle,
-                      borderRadius: BorderRadius.circular(12),
-                      shadows: [
-                        BoxShadow(
-                          color: Colors.white.withValues(alpha: 0.2),
-                          blurRadius: 15,
-                          spreadRadius: 6,
-                          offset: const Offset(3, 3),
+                  child: Center(
+                    child: Text(
+                      widget.label,
+                      style: TextStyle(
+                        color: Colors.white.withValues(
+                          alpha: _isTouched ? 0.8 : 0.5,
                         ),
-                        BoxShadow(
-                          color: Colors.white.withValues(alpha: 0.1),
-                          blurRadius: 8,
-                          spreadRadius: 2,
-                          offset: const Offset(1, 1),
-                        ),
-                      ],
-                    ),
-                    child: Center(
-                      child: Text(
-                        widget.label,
-                        style: TextStyle(
-                          color: Colors.white.withValues(
-                            alpha: _isTouched ? 0.8 : 0.5,
-                          ),
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 2,
-                        ),
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 2,
                       ),
                     ),
                   ),
@@ -156,26 +154,24 @@ class _TrackpadWidgetState extends State<TrackpadWidget> {
                       Positioned(
                         left: _touchPosition.dx * size.width - 20,
                         top: _touchPosition.dy * size.height - 20,
-                        child: RepaintBoundary(
-                          child: Container(
-                            width: 40,
-                            height: 40,
-                            decoration: BoxDecoration(
+                        child: Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.white.withValues(alpha: 0.2),
+                          ),
+                          child: CustomPaint(
+                            painter: InnerShadowPainter(
                               shape: BoxShape.circle,
-                              color: Colors.white.withValues(alpha: 0.2),
-                            ),
-                            child: CustomPaint(
-                              painter: InnerShadowPainter(
-                                shape: BoxShape.circle,
-                                shadows: [
-                                  BoxShadow(
-                                    color: Colors.white.withValues(alpha: 0.25),
-                                    blurRadius: 12,
-                                    spreadRadius: 3,
-                                    offset: const Offset(2, 2),
-                                  ),
-                                ],
-                              ),
+                              shadows: [
+                                BoxShadow(
+                                  color: Colors.white.withValues(alpha: 0.25),
+                                  blurRadius: 12,
+                                  spreadRadius: 3,
+                                  offset: const Offset(2, 2),
+                                ),
+                              ],
                             ),
                           ),
                         ),
