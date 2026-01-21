@@ -365,6 +365,7 @@ class GamepadController extends GetxController {
 
   void selectControl(GamepadControl control) {
     _selectedControl.value = control;
+    update(); // Trigger GetBuilder update to show selection UI
   }
 
   void updateControlSize(double newSize) {
@@ -379,21 +380,24 @@ class GamepadController extends GetxController {
       control.height = newSize;
       control.width = newSize * ratio;
     }
-    _layout.refresh(); // Trigger UI update
+    _layout.refresh(); // Trigger Rx update
+    update(); // Trigger GetBuilder update
   }
 
   void updateControlWidth(double newWidth) {
     final control = _selectedControl.value;
     if (control == null) return;
     control.width = newWidth;
-    _layout.refresh(); // Trigger UI update
+    _layout.refresh(); // Trigger Rx update
+    update(); // Trigger GetBuilder update
   }
 
   void updateControlHeight(double newHeight) {
     final control = _selectedControl.value;
     if (control == null) return;
     control.height = newHeight;
-    _layout.refresh(); // Trigger UI update
+    _layout.refresh(); // Trigger Rx update
+    update(); // Trigger GetBuilder update
   }
 
   Future<void> editControl(GamepadControl control) async {
@@ -458,6 +462,7 @@ class GamepadController extends GetxController {
             buttonMapping: selected,
           );
           _layout.refresh();
+          update();
         }
       }
     } else if (control.type == ControlType.joystick) {
@@ -469,6 +474,7 @@ class GamepadController extends GetxController {
             joystickMapping: selected,
           );
           _layout.refresh();
+          update();
         }
       }
     } else if (control.type == ControlType.buttonCluster) {
@@ -497,6 +503,7 @@ class GamepadController extends GetxController {
                       clusterBottom: b,
                     );
                     _layout.refresh();
+                    update();
                   }
                 }
               },
@@ -521,6 +528,7 @@ class GamepadController extends GetxController {
                       clusterRight: b,
                     );
                     _layout.refresh();
+                    update();
                   }
                 }
               },
@@ -542,6 +550,7 @@ class GamepadController extends GetxController {
                       clusterLeft: b,
                     );
                     _layout.refresh();
+                    update();
                   }
                 }
               },
@@ -563,6 +572,7 @@ class GamepadController extends GetxController {
                       clusterTop: b,
                     );
                     _layout.refresh();
+                    update();
                   }
                 }
               },
@@ -584,6 +594,7 @@ class GamepadController extends GetxController {
                       clusterC: b,
                     );
                     _layout.refresh();
+                    update();
                   }
                 }
               },
@@ -605,6 +616,7 @@ class GamepadController extends GetxController {
                       clusterZ: b,
                     );
                     _layout.refresh();
+                    update();
                   }
                 }
               },
@@ -642,11 +654,13 @@ class GamepadController extends GetxController {
         screenSize.height - control.height,
       );
     }
-    _layout.refresh(); // Trigger UI update
+    _layout.refresh(); // Trigger Rx update
+    update(); // Trigger GetBuilder update
   }
 
   void clearSelectedControl() {
     _selectedControl.value = null;
+    update(); // Trigger GetBuilder update to hide selection UI
   }
 
   void setDpad(int value) {

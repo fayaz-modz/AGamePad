@@ -146,9 +146,9 @@ class GamepadView extends GetView<GamepadController> {
                                               controller
                                                   .selectedControl!
                                                   .height,
-                                            ),
-                                            min: 0.05,
-                                            max: 0.5,
+                                            ).clamp(40.0, 300.0),
+                                            min: 40,
+                                            max: 300,
                                             activeColor: Colors.blueAccent,
                                             onChanged:
                                                 controller.updateControlSize,
@@ -187,9 +187,9 @@ class GamepadView extends GetView<GamepadController> {
                                             value: controller
                                                 .selectedControl!
                                                 .width
-                                                .clamp(0.05, 0.8),
-                                            min: 0.05,
-                                            max: 0.8,
+                                                .clamp(30.0, 300.0),
+                                            min: 30,
+                                            max: 300,
                                             activeColor: Colors.blueAccent,
                                             onChanged:
                                                 controller.updateControlWidth,
@@ -227,9 +227,9 @@ class GamepadView extends GetView<GamepadController> {
                                             value: controller
                                                 .selectedControl!
                                                 .height
-                                                .clamp(0.05, 0.8),
-                                            min: 0.05,
-                                            max: 0.8,
+                                                .clamp(30.0, 300.0),
+                                            min: 30,
+                                            max: 300,
                                             activeColor: Colors.blueAccent,
                                             onChanged:
                                                 controller.updateControlHeight,
