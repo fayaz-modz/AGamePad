@@ -237,22 +237,21 @@ class BluetoothGamepadService {
   }) {
     if (!_isInitialized) return;
 
-    // Android HID Axis Alignment (Deduced):
-    // Host interprets Z/Rz as Right Stick, and Rx/Ry as Triggers/Aux.
+    // HID Report Axis Mapping (matching reportDescriptor in gamepad_descriptor.dart):
     // Index 1 (0x30) X  -> Left Stick X
     // Index 2 (0x31) Y  -> Left Stick Y
-    // Index 3 (0x32) Z  -> Right Stick X (rx)
-    // Index 4 (0x33) Rx -> L2 Trigger (l2)
-    // Index 5 (0x34) Ry -> R2 Trigger (r2)
-    // Index 6 (0x35) Rz -> Right Stick Y (ry)
+    // Index 3 (0x32) Z  -> L2 Trigger
+    // Index 4 (0x33) Rx -> Right Stick X
+    // Index 5 (0x34) Ry -> Right Stick Y
+    // Index 6 (0x35) Rz -> R2 Trigger
     final report = Uint8List(10);
     report[0] = 0x01; // Report ID 1
-    report[1] = lx;       // X
-    report[2] = ly;       // Y
-    report[3] = rx;       // Z  (Right Stick X)
-    report[4] = l2;       // Rx (L2)
-    report[5] = r2;       // Ry (R2)
-    report[6] = ry;       // Rz (Right Stick Y)
+    report[1] = lx;       // X  (Left Stick X)
+    report[2] = ly;       // Y  (Left Stick Y)
+    report[3] = l2;       // Z  (L2 Trigger)
+    report[4] = rx;       // Rx (Right Stick X)
+    report[5] = ry;       // Ry (Right Stick Y)
+    report[6] = r2;       // Rz (R2 Trigger)
     report[7] = buttons & 0xFF;
     report[8] = (buttons >> 8) & 0xFF;
     report[9] = dpad;
