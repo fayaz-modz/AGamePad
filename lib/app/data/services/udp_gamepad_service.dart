@@ -460,6 +460,38 @@ class UDPGamepadService {
     }
   }
 
+  void sendMouseInput({
+    required int dx,
+    required int dy,
+    required int buttons,
+    int wheel = 0,
+  }) {
+    if (!isConnected || _sender == null || _connectedDevice == null) {
+      return;
+    }
+
+    try {
+      // Create mouse report (5 bytes)
+      // [ReportID, Buttons, X, Y, Wheel]
+      final report = Uint8List(5);
+      report[0] = 0x02; // Report ID 2 for mouse
+      report[1] = buttons;
+      report[2] = dx.clamp(-127, 127);
+      report[3] = dy.clamp(-127, 127);
+      report[4] = wheel.clamp(-127, 127);
+
+      _sender!.send(
+        report,
+        InternetAddress(_connectedDevice!.ip),
+        _udpServerPort,
+      );
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('[UDPGamepadService] ❌ Failed to send mouse input: $e');
+      }
+    }
+  }
+
   void _startConnectionPolling() {
     _connectionPollTimer?.cancel();
     _connectionPollTimer = Timer.periodic(

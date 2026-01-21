@@ -445,8 +445,14 @@ class ConnectionController extends GetxController {
         buttons: buttons,
         wheel: wheel,
       );
+    } else if (_connectionMode.value.isUDP) {
+      _udpService.sendMouseInput(
+        dx: dx,
+        dy: dy,
+        buttons: buttons,
+        wheel: wheel,
+      );
     }
-    // UDP doesn't support mouse HID directly yet in the current server spec
   }
 
   // Keepalive methods for Bluetooth

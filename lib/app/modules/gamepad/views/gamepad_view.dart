@@ -27,6 +27,19 @@ class GamepadView extends GetView<GamepadController> {
             clipBehavior:
                 Clip.none, // Allow controls to overflow without clipping
             children: [
+              // Background Trackpad Surface
+              // This is placed first so it's behind all controls
+              if (!controller.isEditing)
+                Positioned.fill(
+                  child: Listener(
+                    onPointerDown: controller.onPointerDown,
+                    onPointerUp: controller.onPointerUp,
+                    onPointerMove: controller.onPointerMove,
+                    behavior: HitTestBehavior.translucent,
+                    child: Container(color: Colors.transparent),
+                  ),
+                ),
+
               // Render all controls from layout
               ...controller.layout.controls.map(
                 (control) => _buildControl(context, control, size, controller),
@@ -288,12 +301,6 @@ class GamepadView extends GetView<GamepadController> {
               ],
             ],
           ),
-          floatingActionButton: FloatingActionButton(
-            onPressed: () =>
-                Get.to(() => const TestUiView(), binding: TestUiBinding()),
-            backgroundColor: Colors.blue,
-            child: const Icon(Icons.bug_report, color: Colors.white),
-          ),
         );
       },
     );
@@ -415,6 +422,7 @@ class GamepadView extends GetView<GamepadController> {
         );
       case ControlType.dpad:
         return Dpad(
+          size: min(control.width, control.height),
           onDown: (val) {
             controller.setDpad(val);
           },

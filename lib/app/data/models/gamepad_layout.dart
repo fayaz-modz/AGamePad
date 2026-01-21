@@ -16,38 +16,38 @@ class GamepadLayout {
         GamepadControl(
           id: 'l_joystick',
           type: ControlType.joystick,
-          left: 260, // Pixels from left
-          bottom: 100, // Pixels from bottom
-          width: 140,
-          height: 140,
+          left: 180, // Pixels from left
+          bottom: 120, // Pixels from bottom
+          width: 130,
+          height: 130,
           joystickMapping: Joystick.left,
         ),
         GamepadControl(
           id: 'dpad',
           type: ControlType.dpad,
-          left: 130, // Pixels from left
-          bottom: 200, // Pixels from top
-          width: 150,
-          height: 150,
+          left: 100, // Pixels from left
+          bottom: 260, // Pixels from top
+          width: 120,
+          height: 120,
         ),
 
         // Right side - use right edge positioning
         GamepadControl(
           id: 'r_joystick',
           type: ControlType.joystick,
-          right: 260, // Pixels from left
-          bottom: 100, // Pixels from bottom
-          width: 140,
-          height: 140,
+          right: 90, // Pixels from left
+          bottom: 260, // Pixels from top
+          width: 120,
+          height: 120,
           joystickMapping: Joystick.right,
         ),
         GamepadControl(
           id: 'abxy',
           type: ControlType.buttonCluster,
-          right: 130, // Pixels from left
-          bottom: 200, // Pixels from top
-          width: 160,
-          height: 160,
+          right: 150, // Pixels from left
+          bottom: 120, // Pixels from bottom
+          width: 150,
+          height: 150,
           // Xbox Standard: A-Bottom, B-Right, X-Left, Y-Top
           clusterBottom: GamepadButton.button1,
           clusterRight: GamepadButton.button2,
@@ -61,17 +61,17 @@ class GamepadLayout {
           type: ControlType.shoulderButton,
           left: 210, // Pixels from left
           bottom: 330, // Pixels from top
-          width: 70,
-          height: 70,
+          width: 90,
+          height: 90,
           buttonMapping: GamepadButton.l1,
         ),
         GamepadControl(
           id: 'l2',
           type: ControlType.shoulderButton,
-          left: 270, // Pixels from left
-          bottom: 270, // Pixels from top
-          width: 70,
-          height: 70,
+          left: 280, // Pixels from left
+          bottom: 260, // Pixels from top
+          width: 90,
+          height: 90,
           buttonMapping: GamepadButton.l2,
         ),
 
@@ -80,17 +80,17 @@ class GamepadLayout {
           type: ControlType.shoulderButton,
           right: 210, // Pixels from left
           bottom: 330, // Pixels from top
-          width: 70,
-          height: 70,
+          width: 90,
+          height: 90,
           buttonMapping: GamepadButton.r1,
         ),
         GamepadControl(
           id: 'r2',
           type: ControlType.shoulderButton,
-          right: 270, // Pixels from left
-          bottom: 270, // Pixels from top
-          width: 70,
-          height: 70,
+          right: 280, // Pixels from left
+          bottom: 260, // Pixels from top
+          width: 90,
+          height: 90,
           buttonMapping: GamepadButton.r2,
         ),
 

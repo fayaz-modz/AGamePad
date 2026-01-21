@@ -382,7 +382,7 @@ func (s *UHIDServer) handleUDPMessages() {
 		// Check if this is a descriptor packet (starts with magic)
 		if n > 4 && string(data[:4]) == "DESC" {
 			s.handleDescriptorPacket(data[4:], addr)
-		} else if n == 8 || n == 10 {
+		} else if n == 8 || n == 10 || n == 5 {
 			// Process raw gamepad input (8 bytes for Classic/BLE, 10 bytes for UDP enhanced)
 			s.processGamepadInput(data, addr)
 		} else {

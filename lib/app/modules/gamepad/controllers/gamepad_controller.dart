@@ -14,6 +14,21 @@ class GamepadController extends GetxController {
 
   // Layout state
   final Rx<GamepadLayout> _layout = GamepadLayout.xbox().obs;
+
+  // Hot reload support - reload layout from static definition
+  void reloadLayout() {
+    final currentId = _layout.value.id;
+    if (currentId == 'xbox_default') {
+      _layout.value = GamepadLayout.xbox();
+    } else if (currentId == 'android_default') {
+      _layout.value = GamepadLayout.android();
+    }
+
+    // Reinitialize descriptor and button mask
+    _descriptor.value = GamepadDescriptor();
+    _buttonMask = ButtonMaskBuilder(_descriptor.value);
+  }
+
   final Rx<GamepadDescriptor> _descriptor = GamepadDescriptor().obs;
   late ButtonMaskBuilder _buttonMask;
 
@@ -180,6 +195,152 @@ class GamepadController extends GetxController {
       _ry.value = map(value.dy);
     }
     sendUpdate();
+  }
+
+  // Trackpad state
+  int _mouseButtonState = 0;
+  double _accumulatedDx = 0.0;
+  double _accumulatedDy = 0.0;
+
+  void onTrackpadPan(Offset delta) {
+    if (_isEditing.value) return;
+
+    // Sensitivity multiplier - user might want to configure this later
+    const double sensitivity = 4.0;
+
+    // Add new delta to accumulated fractional values
+    double targetDx = (delta.dx * sensitivity) + _accumulatedDx;
+    double targetDy = (delta.dy * sensitivity) + _accumulatedDy;
+
+    // Extract the integer part for the report
+    final int dx = targetDx.truncate();
+    final int dy = targetDy.truncate();
+
+    // Keep the fractional part for next time
+    _accumulatedDx = targetDx - dx;
+    _accumulatedDy = targetDy - dy;
+
+    if (dx == 0 && dy == 0) return;
+
+    connectionController.sendMouseInput(
+      dx: dx,
+      dy: dy,
+      buttons: _mouseButtonState,
+    );
+  }
+
+  // Custom gesture state
+  int _activePointers = 0;
+  DateTime _pointerDownTime = DateTime.fromMillisecondsSinceEpoch(0);
+  DateTime _lastTapUpTime = DateTime.fromMillisecondsSinceEpoch(0);
+  bool _isDragging = false;
+  bool _hasMoved = false;
+  bool _potentialRightClick = false;
+  DateTime _rightClickDownTime = DateTime.fromMillisecondsSinceEpoch(0);
+
+  void onPointerDown(PointerDownEvent event) {
+    if (_isEditing.value) return;
+    _activePointers++;
+    _hasMoved = false;
+
+    if (_activePointers == 1) {
+      _pointerDownTime = DateTime.now();
+
+      // Reset accumulators on new touch
+      _accumulatedDx = 0.0;
+      _accumulatedDy = 0.0;
+
+      // Start dragging but don't fire mouse down yet
+      _isDragging = true;
+    } else if (_activePointers == 2) {
+      // Potential 2-finger tap (Right Click)
+      _potentialRightClick = true;
+      _rightClickDownTime = DateTime.now();
+    }
+  }
+
+  void onPointerUp(PointerUpEvent event) {
+    if (_isEditing.value) return;
+    _activePointers = (_activePointers - 1).clamp(0, 10);
+    final now = DateTime.now();
+
+    // Handle Right Click (2-finger tap)
+    if (_potentialRightClick && _activePointers == 0) {
+      final pressDuration = now.difference(_rightClickDownTime);
+      if (pressDuration < const Duration(milliseconds: 250) && !_hasMoved) {
+        _performRightClick();
+      }
+      _potentialRightClick = false;
+      return;
+    }
+
+    // Handle Left Click vs Drag
+    if (_isDragging && _activePointers == 0) {
+      final pressDuration = now.difference(_pointerDownTime);
+
+      if (pressDuration < const Duration(milliseconds: 200) && !_hasMoved) {
+        // Register as tap - fire mouse down then up
+        _performLeftClick();
+        _lastTapUpTime = now;
+      }
+
+      // Always end drag state
+      _isDragging = false;
+    }
+  }
+
+  void onPointerMove(PointerMoveEvent event) {
+    if (_isEditing.value) return;
+
+    // Handle single finger mouse movement (always follow finger)
+    if (_activePointers == 1) {
+      onTrackpadPan(event.delta);
+    }
+
+    // Handle trackpad panning/swipe with 2 fingers
+    if (_activePointers == 2) {
+      onTrackpadPan(event.delta);
+    }
+
+    // Detect significant movement for tap cancellation
+    if (event.delta.distance > 2.0) {
+      _hasMoved = true;
+      // If we move significantly with 2 fingers, cancel right click
+      if (_potentialRightClick) {
+        _potentialRightClick = false;
+      }
+    }
+  }
+
+  void _performLeftClick() async {
+    connectionController.sendMouseInput(dx: 0, dy: 0, buttons: 1);
+    await Future.delayed(const Duration(milliseconds: 30));
+    connectionController.sendMouseInput(dx: 0, dy: 0, buttons: 0);
+  }
+
+  void _performRightClick() async {
+    // Right click is typically button 2 (binary 10) -> int 2?
+    // Standard map: 1=Left, 2=Right, 4=Middle? Or 1=Left, 2=Middle, 3=Right?
+    // In our UDP Service/HID:
+    // Report: [Buttons]
+    // HID standard: Bit 0 = Button 1 (Left), Bit 1 = Button 2 (Right), Bit 2 = Button 3 (Middle)
+    // So Right Click = 2 (0b00000010)
+    connectionController.sendMouseInput(dx: 0, dy: 0, buttons: 2);
+    await Future.delayed(const Duration(milliseconds: 30));
+    connectionController.sendMouseInput(dx: 0, dy: 0, buttons: 0);
+  }
+
+  void setTrackpadDragging(bool isDragging) {
+    if (_isEditing.value) return;
+
+    _mouseButtonState = isDragging ? 1 : 0;
+
+    // Send immediate state update
+    connectionController.sendMouseInput(
+      dx: 0,
+      dy: 0,
+      buttons: _mouseButtonState,
+    );
   }
 
   Future<void> saveLayout() async {

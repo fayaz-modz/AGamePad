@@ -8,7 +8,7 @@ import 'app/routes/app_pages.dart';
 
 void main() {
   // Enable repaint boundary debugging
-  debugRepaintRainbowEnabled = true;
+  // debugRepaintRainbowEnabled = true;
 
   // Initialize theme controller
   Get.put(GamepadThemeController());

@@ -1,6 +1,53 @@
 import 'dart:math';
+import 'dart:ui' as ui;
 
 import 'package:flutter/widgets.dart';
+
+/// Shader-based inner shadow implementation for high performance.
+/// This class manages the fragment shader lifecycle and caching.
+class InnerShadowShader {
+  static ui.FragmentProgram? _program;
+  static bool _isLoading = false;
+  static final List<VoidCallback> _pendingCallbacks = [];
+
+  /// Returns true if the shader is ready to use
+  static bool get isReady => _program != null;
+
+  /// Load the shader program. Call this early (e.g., in main())
+  static Future<void> load() async {
+    if (_program != null || _isLoading) return;
+    _isLoading = true;
+
+    try {
+      _program = await ui.FragmentProgram.fromAsset('shaders/inner_shadow.frag');
+      // Notify all pending callbacks
+      for (final callback in _pendingCallbacks) {
+        callback();
+      }
+      _pendingCallbacks.clear();
+    } catch (e) {
+      debugPrint('Failed to load inner shadow shader: $e');
+    } finally {
+      _isLoading = false;
+    }
+  }
+
+  /// Register a callback to be called when shader is ready
+  static void onReady(VoidCallback callback) {
+    if (_program != null) {
+      callback();
+    } else {
+      _pendingCallbacks.add(callback);
+      // Ensure loading is in progress
+      load();
+    }
+  }
+
+  /// Create a fragment shader instance
+  static ui.FragmentShader? createShader() {
+    return _program?.fragmentShader();
+  }
+}
 
 /// Use this class to define an inset box shadow that can be used inside the [InsetShadowShapeDecoration] shadows.
 final class InsetBoxShadow extends BoxShadow {
@@ -14,6 +61,7 @@ final class InsetBoxShadow extends BoxShadow {
 }
 
 /// A shape decoration that supports inset shadows by adding [InsetBoxShadow] instances to the [shadows] prop.
+/// This implementation uses GPU shaders for high performance rendering.
 class InsetShadowShapeDecoration extends ShapeDecoration {
   const InsetShadowShapeDecoration({
     required super.shape,
@@ -25,14 +73,19 @@ class InsetShadowShapeDecoration extends ShapeDecoration {
 
   @override
   BoxPainter createBoxPainter([VoidCallback? onChanged]) {
-    return _ShapeDecorationPainter(this, onChanged ?? () {});
+    return _ShaderShapeDecorationPainter(this, onChanged ?? () {});
   }
 }
 
-/// An object that paints a [InsetShadowShapeDecoration] into a canvas.
-class _ShapeDecorationPainter extends BoxPainter {
-  _ShapeDecorationPainter(this._decoration, VoidCallback onChanged)
-    : super(onChanged);
+/// An object that paints a [InsetShadowShapeDecoration] into a canvas using GPU shaders.
+class _ShaderShapeDecorationPainter extends BoxPainter {
+  _ShaderShapeDecorationPainter(this._decoration, VoidCallback onChanged)
+      : super(onChanged) {
+    // Ensure shader is loading
+    if (!InnerShadowShader.isReady) {
+      InnerShadowShader.onReady(onChanged);
+    }
+  }
 
   final InsetShadowShapeDecoration _decoration;
 
@@ -47,9 +100,9 @@ class _ShapeDecorationPainter extends BoxPainter {
   late List<Path> _shadowPaths;
   late List<Paint> _shadowPaints;
 
-  // Additional caching to reduce repaints
+  // Shader-related caching
+  ui.FragmentShader? _cachedShader;
   int _lastShadowsHash = 0;
-  bool _needsShadowRecalculation = true;
 
   @override
   VoidCallback get onChanged => super.onChanged!;
@@ -59,10 +112,6 @@ class _ShapeDecorationPainter extends BoxPainter {
       return;
     }
 
-    // We reach here in two cases:
-    //  - the very first time we paint, in which case everything except _decoration is null
-    //  - subsequent times, if the rect has changed, in which case we only need to update
-    //    the features that depend on the actual rect.
     if (_interiorPaint == null &&
         (_decoration.color != null || _decoration.gradient != null)) {
       _interiorPaint = Paint();
@@ -81,11 +130,8 @@ class _ShapeDecorationPainter extends BoxPainter {
     if (_decoration.shadows != null) {
       final currentShadowsHash = _decoration.shadows!.hashCode;
       if (currentShadowsHash != _lastShadowsHash) {
-        _needsShadowRecalculation = true;
         _lastShadowsHash = currentShadowsHash;
-      }
 
-      if (_needsShadowRecalculation) {
         _shadowsWithoutInset = [];
         _insetShadows = [];
         for (final shadow in _decoration.shadows!) {
@@ -95,7 +141,6 @@ class _ShapeDecorationPainter extends BoxPainter {
             _shadowsWithoutInset.add(shadow);
           }
         }
-        _needsShadowRecalculation = false;
       }
 
       if (_shadowsWithoutInset.isNotEmpty) {
@@ -145,14 +190,6 @@ class _ShapeDecorationPainter extends BoxPainter {
       return;
     }
 
-    // The debugHandleDisabledShadowStart and debugHandleDisabledShadowEnd
-    // methods are used in debug mode only to support BlurStyle.outer when
-    // debugDisableShadows is set. Without these clips, the shadows would extend
-    // to the inside of the shape, which would likely obscure important
-    // portions of the rendering and would cause unit tests of widgets that use
-    // BlurStyle.outer to significantly diverge from the original intent.
-    // It is assumed that [debugDisableShadows] will not change when calling
-    // paintInterior or getOuterPath; if it does, the results are undefined.
     bool debugHandleDisabledShadowStart(
       Canvas canvas,
       BoxShadow boxShadow,
@@ -218,8 +255,6 @@ class _ShapeDecorationPainter extends BoxPainter {
   void _paintInterior(Canvas canvas, Rect rect, TextDirection? textDirection) {
     if (_interiorPaint != null) {
       if (_decoration.shape.preferPaintInterior) {
-        // When border is filled, the rect is reduced to avoid anti-aliasing
-        // rounding error leaking the background color around the clipped shape.
         final Rect adjustedRect = _adjustedRectOnOutlinedBorder(rect);
         _decoration.shape.paintInterior(
           canvas,
@@ -252,7 +287,8 @@ class _ShapeDecorationPainter extends BoxPainter {
     _imagePainter!.paint(canvas, _lastRect!, _innerPath, configuration);
   }
 
-  void _paintInsetShadows(
+  /// Paint inset shadows using GPU shader for maximum performance
+  void _paintInsetShadowsWithShader(
     Canvas canvas,
     Rect rect,
     TextDirection? textDirection,
@@ -261,57 +297,147 @@ class _ShapeDecorationPainter extends BoxPainter {
       return;
     }
 
-    for (final shadow in _insetShadows) {
-      canvas.save();
-      final shadowPaint = shadow.toPaint();
-      canvas.clipPath(_innerPath!);
+    // Only use shader if it's ready
+    if (!InnerShadowShader.isReady) {
+      // Fallback to CPU-based rendering while shader loads
+      _paintInsetShadowsFallback(canvas, rect, textDirection);
+      return;
+    }
 
-      // Calculate the center of the path bounds
+    // Create or update shader
+    _cachedShader ??= InnerShadowShader.createShader();
+    if (_cachedShader == null) {
+      _paintInsetShadowsFallback(canvas, rect, textDirection);
+      return;
+    }
+
+    final shader = _cachedShader!;
+
+    // Determine if shape is a circle and extract per-corner radii
+    final bool isCircle = _decoration.shape is CircleBorder;
+    
+    // Per-corner radii: (topLeft, topRight, bottomRight, bottomLeft)
+    double tlRadius = 0.0;
+    double trRadius = 0.0;
+    double brRadius = 0.0;
+    double blRadius = 0.0;
+    
+    if (isCircle) {
+      // For circles, use half the minimum dimension for all corners
+      final radius = min(rect.width, rect.height) / 2.0;
+      tlRadius = trRadius = brRadius = blRadius = radius;
+    } else if (_decoration.shape is RoundedRectangleBorder) {
+      final rrb = _decoration.shape as RoundedRectangleBorder;
+      final borderRadius = rrb.borderRadius.resolve(textDirection);
+      // Apply 0.5x scale to match Flutter's rendering of the same radius values
+      tlRadius = borderRadius.topLeft.x * 0.5;
+      trRadius = borderRadius.topRight.x * 0.5;
+      brRadius = borderRadius.bottomRight.x * 0.5;
+      blRadius = borderRadius.bottomLeft.x * 0.5;
+    }
+
+    // Set uniform values (index matches shader declaration order)
+    int uniformIndex = 0;
+
+    // uSize (vec2)
+    shader.setFloat(uniformIndex++, rect.width);
+    shader.setFloat(uniformIndex++, rect.height);
+
+    // uIsCircle (float)
+    shader.setFloat(uniformIndex++, isCircle ? 1.0 : 0.0);
+
+    // uCornerRadii (vec4): topLeft, topRight, bottomRight, bottomLeft
+    shader.setFloat(uniformIndex++, tlRadius);
+    shader.setFloat(uniformIndex++, trRadius);
+    shader.setFloat(uniformIndex++, brRadius);
+    shader.setFloat(uniformIndex++, blRadius);
+
+    // Set up to 4 shadows
+    for (int i = 0; i < 4; i++) {
+      if (i < _insetShadows.length) {
+        final shadow = _insetShadows[i];
+        // Color (vec4) - premultiplied alpha
+        final color = shadow.color;
+        shader.setFloat(uniformIndex++, color.r);
+        shader.setFloat(uniformIndex++, color.g);
+        shader.setFloat(uniformIndex++, color.b);
+        shader.setFloat(uniformIndex++, color.a);
+        // Offset (vec2)
+        shader.setFloat(uniformIndex++, shadow.offset.dx);
+        shader.setFloat(uniformIndex++, shadow.offset.dy);
+        // BlurRadius (float)
+        shader.setFloat(uniformIndex++, shadow.blurRadius);
+        // SpreadRadius (float)
+        shader.setFloat(uniformIndex++, shadow.spreadRadius);
+      } else {
+        // Unused shadow slot - set alpha to 0
+        shader.setFloat(uniformIndex++, 0.0); // r
+        shader.setFloat(uniformIndex++, 0.0); // g
+        shader.setFloat(uniformIndex++, 0.0); // b
+        shader.setFloat(uniformIndex++, 0.0); // a (disabled)
+        shader.setFloat(uniformIndex++, 0.0); // offset.x
+        shader.setFloat(uniformIndex++, 0.0); // offset.y
+        shader.setFloat(uniformIndex++, 0.0); // blur
+        shader.setFloat(uniformIndex++, 0.0); // spread
+      }
+    }
+
+    // Draw with shader
+    canvas.save();
+    canvas.clipPath(_innerPath!);
+    canvas.translate(rect.left, rect.top);
+
+    final paint = Paint()..shader = shader;
+    canvas.drawRect(Offset.zero & rect.size, paint);
+
+    canvas.restore();
+  }
+
+  /// Fallback CPU-based rendering when shader is not available
+  void _paintInsetShadowsFallback(
+    Canvas canvas,
+    Rect rect,
+    TextDirection? textDirection,
+  ) {
+    if (_innerPath == null) return;
+
+    canvas.save();
+    canvas.clipPath(_innerPath!);
+
+    for (final shadow in _insetShadows) {
+      final paint = shadow.toPaint();
       final center = rect.center;
 
-      // To calculate the inset shadow area we need to take the biggest possible shadow outer bound (includes the spread and blur)
-      // and cut-off the inner path transformed by the shadow offset and spread radius.
       final outerBound = rect.inflate(
         shadow.spreadRadius +
             shadow.blurRadius +
             max(shadow.offset.dx.abs(), shadow.offset.dy.abs()),
       );
 
-      // Create a matrix to translate the path to origin for proportional scaling
       final translateToOrigin = Matrix4.identity()
         ..translateByDouble(-center.dx, -center.dy, 0, 1);
 
-      // Scaling down the inner path according to the spread diameter (radius * 2)
       final scaleX = 1 - ((shadow.spreadRadius * 2) / rect.width);
       final scaleY = 1 - ((shadow.spreadRadius * 2) / rect.height);
-      final scalingMatrix = Matrix4.identity()
-        ..scaleByDouble(scaleX, scaleY, 1, 1);
+      final scalingMatrix = Matrix4.identity()..scaleByDouble(scaleX, scaleY, 1, 1);
 
-      // Create a matrix to translate back to original center with applied shadow offset
       final translateX = center.dx + shadow.offset.dx;
       final translateY = center.dy + shadow.offset.dy;
-      final translateBack = Matrix4.identity()
-        ..translateByDouble(translateX, translateY, 0, 1);
+      final translateBack = Matrix4.identity()..translateByDouble(translateX, translateY, 0, 1);
 
-      // Combine the matrices: translate back * scale * translate to origin
-      final combinedMatrix = translateBack
-          .multiplied(scalingMatrix)
-          .multiplied(translateToOrigin);
+      final combinedMatrix = translateBack.multiplied(scalingMatrix).multiplied(translateToOrigin);
 
-      final innerPathOfTheInsetShadow = _innerPath!.transform(
-        combinedMatrix.storage,
-      );
+      final innerPathOfTheInsetShadow = _innerPath!.transform(combinedMatrix.storage);
 
       final path = Path.combine(
         PathOperation.difference,
         Path()..addRect(outerBound),
         innerPathOfTheInsetShadow,
       );
-
-      canvas.drawPath(path, shadowPaint);
-
-      canvas.restore();
+      canvas.drawPath(path, paint);
     }
+
+    canvas.restore();
   }
 
   @override
@@ -324,21 +450,13 @@ class _ShapeDecorationPainter extends BoxPainter {
   void paint(Canvas canvas, Offset offset, ImageConfiguration configuration) {
     assert(configuration.size != null);
     final Rect rect = offset & configuration.size!;
-
-    // assert(() {
-    //   // Only print when actually repainting (not just cached redraws)
-    //   if (_needsShadowRecalculation || rect != _lastRect) {
-    //     debugPrint('InsetShadowShapeDecoration repaint: ${rect.size}');
-    //   }
-    //   return true;
-    // }());
-
     final TextDirection? textDirection = configuration.textDirection;
+
     _precache(rect, textDirection);
     _paintShadows(canvas, rect, textDirection);
     _paintInterior(canvas, rect, textDirection);
     _paintImage(canvas, configuration);
-    _paintInsetShadows(canvas, rect, textDirection);
+    _paintInsetShadowsWithShader(canvas, rect, textDirection);
     _decoration.shape.paint(canvas, rect, textDirection: textDirection);
   }
 }

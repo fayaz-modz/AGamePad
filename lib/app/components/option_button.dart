@@ -56,21 +56,17 @@ class OptionButton extends StatelessWidget {
             borderRadius: BorderRadius.circular(8),
             color: backgroundColor,
           ),
-          child: DecoratedBox(
-            decoration: InsetShadowShapeDecoration(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(8),
+              gradient: RadialGradient(
+                center: Alignment(-0.2, -0.2),
+                radius: 1.5,
+                colors: [
+                  innerShadows.first.color.withOpacity(0.1),
+                  Colors.transparent,
+                ],
               ),
-              shadows: innerShadows
-                  .map(
-                    (shadow) => InsetBoxShadow(
-                      color: shadow.color,
-                      blurRadius: shadow.blurRadius,
-                      spreadRadius: shadow.spreadRadius,
-                      offset: shadow.offset,
-                    ),
-                  )
-                  .toList(),
             ),
             child: Center(
               child: Text(
